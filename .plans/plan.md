@@ -12,7 +12,6 @@ contracts every sub-plan depends on.
 
 | # | Plan | Depends on |
 | - | ---- | ---------- |
-| 2 | [note-model-and-storage.md](pending/02-note-model-and-storage.md) | — |
 
 ## Not Ready (blocked on dependencies above)
 
@@ -27,6 +26,7 @@ contracts every sub-plan depends on.
 | # | Plan | Status |
 | - | ---- | ------ |
 | 1 | [pwa-scaffold.md](implemented/01-pwa-scaffold.md) | ✅ Done |
+| 2 | [note-model-and-storage.md](implemented/02-note-model-and-storage.md) | ✅ Done |
 
 ---
 

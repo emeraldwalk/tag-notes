@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import solid from 'vite-plugin-solid'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -13,4 +13,7 @@ export default defineConfig({
       },
     }),
   ],
+  test: {
+    environment: 'node',
+  },
 })

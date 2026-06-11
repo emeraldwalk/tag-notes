@@ -2,11 +2,11 @@
 
 ## Checklist
 
-- [ ] Define shared `Note`/`ParsedNote`/`NoteStore` types
-- [ ] Implement text parser (title/body/tags extraction)
-- [ ] Implement `NoteStore` backed by IndexedDB
-- [ ] Write unit tests for the parser (edge cases below)
-- [ ] Write unit tests for the store (CRUD + tag indexing)
+- [x] Define shared `Note`/`ParsedNote`/`NoteStore` types
+- [x] Implement text parser (title/body/tags extraction)
+- [x] Implement `NoteStore` backed by IndexedDB
+- [x] Write unit tests for the parser (edge cases below)
+- [x] Write unit tests for the store (CRUD + tag indexing)
 
 ## Context
 
