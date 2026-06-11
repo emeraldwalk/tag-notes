@@ -1,5 +1,12 @@
+import NoteTextEditor from '../components/NoteTextEditor';
+import { noteStore } from '../lib/notes/store-instance';
+
 function Home() {
-  return <div>Home (note entry — plan 4)</div>
+  const handleSave = async (rawText: string) => {
+    await noteStore.create(rawText);
+  };
+
+  return <NoteTextEditor initialText="" onSave={handleSave} />;
 }
 
-export default Home
+export default Home;

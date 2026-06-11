@@ -2,10 +2,10 @@
 
 ## Checklist
 
-- [ ] Build `NoteTextEditor` shared component (textarea + parsed preview + save)
-- [ ] Implement `Home` route using `NoteTextEditor` in "create" mode
-- [ ] Wire `NoteTextEditor` to `NoteStore` from plan 2
-- [ ] Verify build, lint, typecheck pass and manual create flow works
+- [x] Build `NoteTextEditor` shared component (textarea + parsed preview + save)
+- [x] Implement `Home` route using `NoteTextEditor` in "create" mode
+- [x] Wire `NoteTextEditor` to `NoteStore` from plan 2
+- [x] Verify build, lint, typecheck pass and manual create flow works
 
 ## Context
 
