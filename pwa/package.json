@@ -12,6 +12,7 @@
     "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg"
   },
   "dependencies": {
+    "@solidjs/router": "^0.16.1",
     "solid-js": "^1.9.13"
   },
   "devDependencies": {

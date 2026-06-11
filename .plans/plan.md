@@ -12,13 +12,12 @@ contracts every sub-plan depends on.
 
 | # | Plan | Depends on |
 | - | ---- | ---------- |
+| 4 | [home-note-entry.md](pending/04-home-note-entry.md) | 2, 3 |
 
 ## Not Ready (blocked on dependencies above)
 
 | # | Plan | Depends on |
 | - | ---- | ---------- |
-| 3 | [app-shell-and-routing.md](pending/03-app-shell-and-routing.md) | 1 |
-| 4 | [home-note-entry.md](pending/04-home-note-entry.md) | 2, 3 |
 | 5 | [list-and-tag-filter-and-editor.md](pending/05-list-and-tag-filter-and-editor.md) | 2, 3, 4 |
 
 ## Completed
@@ -27,6 +26,7 @@ contracts every sub-plan depends on.
 | - | ---- | ------ |
 | 1 | [pwa-scaffold.md](implemented/01-pwa-scaffold.md) | ✅ Done |
 | 2 | [note-model-and-storage.md](implemented/02-note-model-and-storage.md) | ✅ Done |
+| 3 | [app-shell-and-routing.md](implemented/03-app-shell-and-routing.md) | ✅ Done |
 
 ---
 

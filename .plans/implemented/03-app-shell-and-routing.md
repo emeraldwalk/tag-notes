@@ -2,12 +2,12 @@
 
 ## Checklist
 
-- [ ] Add `@solidjs/router` dependency
-- [ ] Define routes: `/`, `/notes`, `/notes/:id`
-- [ ] Build `BottomNav` component (iOS-style tab bar)
-- [ ] Wire up `App.tsx` as the shell: router outlet + persistent `BottomNav`
-- [ ] Add placeholder route components (real content comes from plans 4 & 5)
-- [ ] Verify build, lint, typecheck pass and routes navigate correctly
+- [x] Add `@solidjs/router` dependency
+- [x] Define routes: `/`, `/notes`, `/notes/:id`
+- [x] Build `BottomNav` component (iOS-style tab bar)
+- [x] Wire up `App.tsx` as the shell: router outlet + persistent `BottomNav`
+- [x] Add placeholder route components (real content comes from plans 4 & 5)
+- [x] Verify build, lint, typecheck pass and routes navigate correctly
 
 ## Context
 
