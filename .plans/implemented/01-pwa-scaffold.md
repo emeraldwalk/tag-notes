@@ -2,14 +2,14 @@
 
 ## Checklist
 
-- [ ] Create `pwa/` Vite + SolidJS + TypeScript project (no SolidStart)
-- [ ] Configure `vite-plugin-pwa` with a static manifest
-- [ ] Fix tsconfig (DOM only, no WebWorker conflict)
-- [ ] Add lint config (oxlint) with `dist/`/`dev-dist/` ignored
-- [ ] Add placeholder logo + generate PWA icon assets
-- [ ] Update `index.html` with iOS PWA meta tags and correct icon paths
-- [ ] Verify build, lint, and typecheck all pass
-- [ ] Update root `.gitignore` for `pwa/` build artifacts
+- [x] Create `pwa/` Vite + SolidJS + TypeScript project (no SolidStart)
+- [x] Configure `vite-plugin-pwa` with a static manifest
+- [x] Fix tsconfig (DOM only, no WebWorker conflict)
+- [x] Add lint config (oxlint) with `dist/`/`dev-dist/` ignored
+- [x] Add placeholder logo + generate PWA icon assets
+- [x] Update `index.html` with iOS PWA meta tags and correct icon paths
+- [x] Verify build, lint, and typecheck all pass
+- [x] Update root `.gitignore` for `pwa/` build artifacts
 
 ## Context
 

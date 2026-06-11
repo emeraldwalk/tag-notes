@@ -1,1 +1,6 @@
 .claude
+
+pwa/node_modules/
+pwa/dist/
+pwa/dev-dist/
+pwa/.vite/
