@@ -12,7 +12,6 @@ contracts every sub-plan depends on.
 
 | # | Plan | Depends on |
 | - | ---- | ---------- |
-| 5 | [list-and-tag-filter-and-editor.md](pending/05-list-and-tag-filter-and-editor.md) | 2, 3, 4 |
 
 ## Not Ready (blocked on dependencies above)
 
@@ -27,6 +26,7 @@ contracts every sub-plan depends on.
 | 2 | [note-model-and-storage.md](implemented/02-note-model-and-storage.md) | ✅ Done |
 | 3 | [app-shell-and-routing.md](implemented/03-app-shell-and-routing.md) | ✅ Done |
 | 4 | [home-note-entry.md](implemented/04-home-note-entry.md) | ✅ Done |
+| 5 | [list-and-tag-filter-and-editor.md](implemented/05-list-and-tag-filter-and-editor.md) | ✅ Done |
 
 ---
 

@@ -1,0 +1,17 @@
+.notFound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1rem;
+  padding: 1rem;
+  text-align: center;
+  color: #8e8e93;
+}
+
+.backLink {
+  color: #007aff;
+  text-decoration: none;
+  font-weight: 600;
+}

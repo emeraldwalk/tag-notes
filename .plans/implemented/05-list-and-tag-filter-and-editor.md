@@ -2,11 +2,11 @@
 
 ## Checklist
 
-- [ ] Implement `List` route: note titles + tag filter UI
-- [ ] Implement `NoteEditor` route: view/edit an existing note via `NoteTextEditor`
-- [ ] Wire tapping a note in the list to navigate to `/notes/:id`
-- [ ] Wire `NoteEditor` save/delete back to `NoteStore`, with navigation on completion
-- [ ] Verify build, lint, typecheck pass and manual list/filter/edit/delete flow works
+- [x] Implement `List` route: note titles + tag filter UI
+- [x] Implement `NoteEditor` route: view/edit an existing note via `NoteTextEditor`
+- [x] Wire tapping a note in the list to navigate to `/notes/:id`
+- [x] Wire `NoteEditor` save/delete back to `NoteStore`, with navigation on completion
+- [x] Verify build, lint, typecheck pass and manual list/filter/edit/delete flow works
 
 ## Context
 
