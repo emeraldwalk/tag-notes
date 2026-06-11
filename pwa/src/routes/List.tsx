@@ -10,18 +10,30 @@ function List() {
   const [notes, setNotes] = createSignal<Note[]>([]);
   const [tags, setTags] = createSignal<string[]>([]);
   const [activeTag, setActiveTag] = createSignal<string | undefined>();
+  const [untaggedOnly, setUntaggedOnly] = createSignal(false);
+  const [hasUntagged, setHasUntagged] = createSignal(false);
 
   const refreshTags = async () => {
     setTags(await noteStore.listTags());
   };
 
   const refreshNotes = async () => {
+    if (untaggedOnly()) {
+      const all = await noteStore.list();
+      setNotes(all.filter((note) => note.tags.length === 0));
+      return;
+    }
     const tag = activeTag();
     setNotes(tag ? await noteStore.listByTag(tag) : await noteStore.list());
   };
 
+  const refreshHasUntagged = async () => {
+    const all = await noteStore.list();
+    setHasUntagged(all.some((note) => note.tags.length === 0));
+  };
+
   const refreshAll = async () => {
-    await Promise.all([refreshTags(), refreshNotes()]);
+    await Promise.all([refreshTags(), refreshNotes(), refreshHasUntagged()]);
   };
 
   onMount(() => {
@@ -29,7 +41,14 @@ function List() {
   });
 
   const handleTagClick = (tag: string) => {
+    setUntaggedOnly(false);
     setActiveTag((current) => (current === tag ? undefined : tag));
+    void refreshNotes();
+  };
+
+  const handleUntaggedClick = () => {
+    setActiveTag(undefined);
+    setUntaggedOnly((current) => !current);
     void refreshNotes();
   };
 
@@ -37,7 +56,7 @@ function List() {
 
   return (
     <div class={styles.container}>
-      <Show when={tags().length > 0}>
+      <Show when={tags().length > 0 || hasUntagged()}>
         <div class={styles.tagFilter}>
           <For each={tags()}>
             {(tag) => (
@@ -51,6 +70,16 @@ function List() {
               </button>
             )}
           </For>
+          <Show when={hasUntagged()}>
+            <button
+              type="button"
+              class={styles.tagChip}
+              classList={{ [styles.tagChipActive]: untaggedOnly() }}
+              onClick={() => handleUntaggedClick()}
+            >
+              No tags
+            </button>
+          </Show>
         </div>
       </Show>
 
@@ -58,7 +87,11 @@ function List() {
         when={notes().length > 0}
         fallback={
           <div class={styles.emptyState}>
-            {activeTag() ? 'No notes with this tag' : 'No notes yet'}
+            {untaggedOnly()
+              ? 'No notes without tags'
+              : activeTag()
+                ? 'No notes with this tag'
+                : 'No notes yet'}
           </div>
         }
       >
