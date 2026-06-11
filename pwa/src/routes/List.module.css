@@ -6,6 +6,16 @@
   gap: 0.75rem;
 }
 
+.searchInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.8rem;
+  font-size: 1rem;
+  border: 1px solid #d1d1d6;
+  border-radius: 8px;
+  background: #f8f8f8;
+}
+
 .tagFilter {
   display: flex;
   flex-wrap: wrap;

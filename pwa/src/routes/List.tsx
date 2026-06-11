@@ -1,5 +1,5 @@
 import { useNavigate } from '@solidjs/router';
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { createMemo, createSignal, For, onMount, Show } from 'solid-js';
 import { noteStore } from '../lib/notes/store-instance';
 import type { Note } from '../lib/notes/types';
 import styles from './List.module.css';
@@ -12,6 +12,7 @@ function List() {
   const [activeTag, setActiveTag] = createSignal<string | undefined>();
   const [untaggedOnly, setUntaggedOnly] = createSignal(false);
   const [hasUntagged, setHasUntagged] = createSignal(false);
+  const [searchQuery, setSearchQuery] = createSignal('');
 
   const refreshTags = async () => {
     setTags(await noteStore.listTags());
@@ -54,8 +55,22 @@ function List() {
 
   const formatTimestamp = (iso: string) => new Date(iso).toLocaleString();
 
+  const visibleNotes = createMemo(() => {
+    const query = searchQuery().trim().toLowerCase();
+    if (!query) return notes();
+    return notes().filter((note) => note.rawText.toLowerCase().includes(query));
+  });
+
   return (
     <div class={styles.container}>
+      <input
+        type="search"
+        class={styles.searchInput}
+        placeholder="Search notes"
+        value={searchQuery()}
+        onInput={(event) => setSearchQuery(event.currentTarget.value)}
+      />
+
       <Show when={tags().length > 0 || hasUntagged()}>
         <div class={styles.tagFilter}>
           <For each={tags()}>
@@ -84,19 +99,21 @@ function List() {
       </Show>
 
       <Show
-        when={notes().length > 0}
+        when={visibleNotes().length > 0}
         fallback={
           <div class={styles.emptyState}>
-            {untaggedOnly()
-              ? 'No notes without tags'
-              : activeTag()
-                ? 'No notes with this tag'
-                : 'No notes yet'}
+            {searchQuery().trim()
+              ? 'No notes match your search'
+              : untaggedOnly()
+                ? 'No notes without tags'
+                : activeTag()
+                  ? 'No notes with this tag'
+                  : 'No notes yet'}
           </div>
         }
       >
         <div class={styles.list}>
-          <For each={notes()}>
+          <For each={visibleNotes()}>
             {(note) => (
               <button
                 type="button"
