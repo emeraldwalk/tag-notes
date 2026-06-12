@@ -18,7 +18,7 @@ function Shell(props: { children?: JSX.Element }) {
 
 function App() {
   return (
-    <Router root={Shell}>
+    <Router root={Shell} base="/tag-notes/">
       <Route path="/" component={Home} />
       <Route path="/notes" component={List} />
       <Route path="/notes/:id" component={NoteEditor} />

@@ -3,6 +3,7 @@ import solid from 'vite-plugin-solid'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: '/tag-notes/',
   plugins: [
     solid(),
     VitePWA({
