@@ -4,6 +4,7 @@ import BottomNav from './components/BottomNav'
 import Home from './routes/Home'
 import List from './routes/List'
 import NoteEditor from './routes/NoteEditor'
+import Settings from './routes/Settings'
 import styles from './App.module.css'
 
 function Shell(props: { children?: JSX.Element }) {
@@ -21,6 +22,7 @@ function App() {
       <Route path="/" component={Home} />
       <Route path="/notes" component={List} />
       <Route path="/notes/:id" component={NoteEditor} />
+      <Route path="/settings" component={Settings} />
     </Router>
   )
 }

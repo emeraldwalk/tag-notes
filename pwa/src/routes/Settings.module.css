@@ -1,0 +1,72 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.heading {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.noteCount {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #8e8e93;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.actionButton {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: #007aff;
+  border: none;
+  border-radius: 8px;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.success {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #34c759;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #ff3b30;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #8e8e93;
+}

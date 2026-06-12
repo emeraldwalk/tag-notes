@@ -1,5 +1,5 @@
 import { parseNoteText } from './parse';
-import type { Note, NoteStore } from './types';
+import type { ImportableNote, Note, NoteStore } from './types';
 
 const DB_NAME = 'tag-notes';
 const DB_VERSION = 1;
@@ -154,6 +154,27 @@ export function createIndexedDbNoteStore(): NoteStore {
     return sortByUpdatedAtDesc(notes);
   }
 
+  async function importAll(notes: ImportableNote[]): Promise<void> {
+    const db = await getDb();
+    const tx = db.transaction(NOTES_STORE, 'readwrite');
+    const store = tx.objectStore(NOTES_STORE);
+    const now = new Date().toISOString();
+
+    for (const note of notes) {
+      const parsed = parseNoteText(note.rawText);
+      const record: Note = {
+        ...parsed,
+        id: note.id ?? crypto.randomUUID(),
+        rawText: note.rawText,
+        createdAt: note.createdAt ?? now,
+        updatedAt: note.updatedAt ?? now,
+      };
+      store.put(record);
+    }
+
+    await transactionDone(tx);
+  }
+
   return {
     list,
     get,
@@ -162,5 +183,6 @@ export function createIndexedDbNoteStore(): NoteStore {
     remove,
     listTags,
     listByTag,
+    importAll,
   };
 }

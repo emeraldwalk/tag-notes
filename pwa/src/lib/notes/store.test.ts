@@ -138,4 +138,54 @@ describe('createIndexedDbNoteStore', () => {
     const newTagNotes = await store.listByTag('new-tag');
     expect(newTagNotes.map((n) => n.id)).toEqual([note.id]);
   });
+
+  describe('importAll', () => {
+    it('adds notes, re-parsing rawText and generating missing ids/timestamps', async () => {
+      await store.importAll([{ rawText: 'Imported Title\n\nBody\n\n:imported' }]);
+
+      const notes = await store.list();
+      expect(notes).toHaveLength(1);
+      expect(notes[0].id).toBeTruthy();
+      expect(notes[0].title).toBe('Imported Title');
+      expect(notes[0].body).toBe('Body');
+      expect(notes[0].tags).toEqual(['imported']);
+      expect(notes[0].createdAt).toBe(notes[0].updatedAt);
+    });
+
+    it('preserves provided id/createdAt/updatedAt', async () => {
+      await store.importAll([
+        {
+          id: 'fixed-id',
+          rawText: 'Title\n\nBody',
+          createdAt: '2020-01-01T00:00:00.000Z',
+          updatedAt: '2020-01-02T00:00:00.000Z',
+        },
+      ]);
+
+      const note = await store.get('fixed-id');
+      expect(note?.createdAt).toBe('2020-01-01T00:00:00.000Z');
+      expect(note?.updatedAt).toBe('2020-01-02T00:00:00.000Z');
+    });
+
+    it('upserts: re-importing the same id overwrites the existing note', async () => {
+      const original = await store.create('Original\n\n:a');
+      await store.importAll([{ id: original.id, rawText: 'Replaced\n\n:b' }]);
+
+      const notes = await store.list();
+      expect(notes).toHaveLength(1);
+      expect(notes[0].id).toBe(original.id);
+      expect(notes[0].title).toBe('Replaced');
+      expect(notes[0].tags).toEqual(['b']);
+    });
+
+    it('imports multiple notes in one call', async () => {
+      await store.importAll([
+        { rawText: 'One\n\n:x' },
+        { rawText: 'Two\n\n:y' },
+      ]);
+
+      const notes = await store.list();
+      expect(notes.map((n) => n.title).sort()).toEqual(['One', 'Two']);
+    });
+  });
 });
