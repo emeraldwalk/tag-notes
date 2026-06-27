@@ -3,6 +3,7 @@
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .body {
