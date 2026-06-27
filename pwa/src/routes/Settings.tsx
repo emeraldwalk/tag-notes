@@ -1,4 +1,5 @@
 import { createSignal, onMount, Show } from 'solid-js';
+import { getFoodTargets, setFoodTargets } from '../lib/foods/targets';
 import {
   buildExportFile,
   exportFileName,
@@ -16,6 +17,9 @@ interface Status {
 function Settings() {
   const [noteCount, setNoteCount] = createSignal(0);
   const [status, setStatus] = createSignal<Status | undefined>();
+  const initialTargets = getFoodTargets();
+  const [proteinTarget, setProteinTarget] = createSignal(String(initialTargets.protein));
+  const [calorieTarget, setCalorieTarget] = createSignal(String(initialTargets.calories));
   let fileInput: HTMLInputElement | undefined;
 
   const refreshCount = async () => {
@@ -25,6 +29,15 @@ function Settings() {
   onMount(() => {
     void refreshCount();
   });
+
+  const handleSaveTargets = (event: Event) => {
+    event.preventDefault();
+    setFoodTargets({
+      protein: Number(proteinTarget()) || 0,
+      calories: Number(calorieTarget()) || 0,
+    });
+    setStatus({ kind: 'success', message: 'Food targets saved.' });
+  };
 
   const handleExport = async () => {
     const notes = await noteStore.list();
@@ -62,6 +75,35 @@ function Settings() {
   return (
     <div class={styles.container}>
       <h1 class={styles.heading}>Settings</h1>
+
+      <section class={styles.section}>
+        <h2 class={styles.sectionTitle}>Food Targets</h2>
+        <form class={styles.targetForm} onSubmit={handleSaveTargets}>
+          <label class={styles.targetField}>
+            <span>Daily protein target (g)</span>
+            <input
+              type="number"
+              inputmode="decimal"
+              class={styles.targetInput}
+              value={proteinTarget()}
+              onInput={(event) => setProteinTarget(event.currentTarget.value)}
+            />
+          </label>
+          <label class={styles.targetField}>
+            <span>Daily calorie target</span>
+            <input
+              type="number"
+              inputmode="decimal"
+              class={styles.targetInput}
+              value={calorieTarget()}
+              onInput={(event) => setCalorieTarget(event.currentTarget.value)}
+            />
+          </label>
+          <button type="submit" class={styles.actionButton}>
+            Save Targets
+          </button>
+        </form>
+      </section>
 
       <section class={styles.section}>
         <h2 class={styles.sectionTitle}>Data</h2>

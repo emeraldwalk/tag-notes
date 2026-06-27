@@ -54,6 +54,26 @@ function BottomNav() {
         <span>Notes</span>
       </A>
       <A
+        href="/food"
+        class={styles.link}
+        classList={{ [styles.active]: location.pathname.startsWith('/food') }}
+      >
+        <svg
+          class={styles.icon}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 8c0 4.4-2.7 8-6 8s-6-3.6-6-8a6 6 0 1 1 12 0Z" />
+          <path d="M12 2v4" />
+        </svg>
+        <span>Food</span>
+      </A>
+      <A
         href="/settings"
         class={styles.link}
         classList={{ [styles.active]: location.pathname === '/settings' }}

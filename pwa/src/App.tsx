@@ -1,6 +1,7 @@
 import { Route, Router } from '@solidjs/router'
 import type { JSX } from 'solid-js'
 import BottomNav from './components/BottomNav'
+import Food from './routes/Food'
 import Home from './routes/Home'
 import List from './routes/List'
 import NoteEditor from './routes/NoteEditor'
@@ -22,6 +23,7 @@ function App() {
       <Route path="/" component={Home} />
       <Route path="/notes" component={List} />
       <Route path="/notes/:id" component={NoteEditor} />
+      <Route path="/food" component={Food} />
       <Route path="/settings" component={Settings} />
     </Router>
   )

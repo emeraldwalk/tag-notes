@@ -1,10 +1,6 @@
+import { NOTES_STORE, openDatabase, requestToPromise, TAGS_INDEX, transactionDone } from '../db';
 import { parseNoteText } from './parse';
 import type { ImportableNote, Note, NoteStore } from './types';
-
-const DB_NAME = 'tag-notes';
-const DB_VERSION = 1;
-const NOTES_STORE = 'notes';
-const TAGS_INDEX = 'tags';
 
 /** Thrown by `update()` when no note exists with the given id. */
 export class NoteNotFoundError extends Error {
@@ -12,38 +8,6 @@ export class NoteNotFoundError extends Error {
     super(`Note not found: ${id}`);
     this.name = 'NoteNotFoundError';
   }
-}
-
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(NOTES_STORE)) {
-        const store = db.createObjectStore(NOTES_STORE, { keyPath: 'id' });
-        store.createIndex(TAGS_INDEX, 'tags', { multiEntry: true });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function transactionDone(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
 }
 
 function sortByUpdatedAtDesc(notes: Note[]): Note[] {
