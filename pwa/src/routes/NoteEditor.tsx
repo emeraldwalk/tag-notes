@@ -1,5 +1,6 @@
 import { A, useNavigate, useParams } from '@solidjs/router';
 import { createSignal, onMount, Show } from 'solid-js';
+import NavBar from '../components/NavBar';
 import NoteTextEditor from '../components/NoteTextEditor';
 import { noteStore } from '../lib/notes/store-instance';
 import type { Note } from '../lib/notes/types';
@@ -20,38 +21,41 @@ function NoteEditor() {
 
   const handleSave = async (rawText: string) => {
     await noteStore.update(id(), rawText);
-    navigate('/notes');
+    navigate('/notes/history');
   };
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this note?')) return;
     await noteStore.remove(id());
-    navigate('/notes');
+    navigate('/notes/history');
   };
 
   return (
-    <Show when={!loading()} fallback={<div />}>
-      <Show
-        when={note()}
-        fallback={
-          <div class={styles.notFound}>
-            <p>Note not found</p>
-            <A href="/notes" class={styles.backLink}>
-              Back to list
-            </A>
-          </div>
-        }
-      >
-        {(currentNote) => (
-          <NoteTextEditor
-            initialText={currentNote().rawText}
-            onSave={handleSave}
-            onDelete={handleDelete}
-            saveLabel="Save Changes"
-          />
-        )}
+    <div class={styles.page}>
+      <NavBar title="Edit Note" backHref="/notes/history" backLabel="All Notes" />
+      <Show when={!loading()} fallback={<div />}>
+        <Show
+          when={note()}
+          fallback={
+            <div class={styles.notFound}>
+              <p>Note not found</p>
+              <A href="/notes/history" class={styles.backLink}>
+                Back to list
+              </A>
+            </div>
+          }
+        >
+          {(currentNote) => (
+            <NoteTextEditor
+              initialText={currentNote().rawText}
+              onSave={handleSave}
+              onDelete={handleDelete}
+              saveLabel="Save Changes"
+            />
+          )}
+        </Show>
       </Show>
-    </Show>
+    </div>
   );
 }
 

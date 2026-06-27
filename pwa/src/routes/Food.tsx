@@ -1,4 +1,5 @@
 import { createMemo, createSignal, For, onMount, Show } from 'solid-js';
+import NavBar from '../components/NavBar';
 import { foodStore } from '../lib/foods/store-instance';
 import { getFoodTargets, todayDateKey } from '../lib/foods/targets';
 import type { FoodEntry } from '../lib/foods/types';
@@ -88,6 +89,7 @@ function Food() {
 
   return (
     <div class={styles.container}>
+      <NavBar title="Today" action={{ label: 'History', href: '/food/history' }} />
       <div class={styles.stats}>
         <div class={styles.remainingRow}>
           <div class={styles.remainingCard}>
@@ -123,7 +125,7 @@ function Food() {
             type="number"
             inputmode="decimal"
             class={styles.macroInput}
-            placeholder="Protein"
+            placeholder="Protein (g)"
             value={form().protein}
             onInput={(event) => updateField('protein', event.currentTarget.value)}
           />
@@ -131,7 +133,7 @@ function Food() {
             type="number"
             inputmode="decimal"
             class={styles.macroInput}
-            placeholder="Calories"
+            placeholder="Calories (kcal)"
             value={form().calories}
             onInput={(event) => updateField('calories', event.currentTarget.value)}
           />
@@ -139,7 +141,7 @@ function Food() {
             type="number"
             inputmode="decimal"
             class={styles.macroInput}
-            placeholder="Carbs"
+            placeholder="Carbs (g)"
             value={form().carbs}
             onInput={(event) => updateField('carbs', event.currentTarget.value)}
           />
