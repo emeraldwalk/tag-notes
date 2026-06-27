@@ -34,6 +34,17 @@ export default defineConfig({
       devOptions: {
         enabled: true,
       },
+      // The production service worker registers with scope "/tag-notes/",
+      // which also covers "/tag-notes/preview/". Without this denylist its
+      // NavigationRoute intercepts every navigation in that scope -
+      // including a first-ever visit to /preview/ - and serves back the
+      // production index.html before the preview build's own service
+      // worker ever gets a chance to register.
+      workbox: isPreview
+        ? undefined
+        : {
+            navigateFallbackDenylist: [/^\/tag-notes\/preview\//],
+          },
     }),
   ],
   test: {
