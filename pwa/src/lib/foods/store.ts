@@ -50,6 +50,24 @@ export function createIndexedDbFoodStore(): FoodStore {
     return record;
   }
 
+  async function update(id: string, entry: Omit<FoodEntry, 'id' | 'createdAt'>): Promise<FoodEntry> {
+    const db = await getDb();
+    const tx = db.transaction(FOODS_STORE, 'readwrite');
+    const store = tx.objectStore(FOODS_STORE);
+
+    const existing = await requestToPromise(store.get(id));
+    if (!existing) {
+      tx.abort();
+      throw new Error(`Food entry not found: ${id}`);
+    }
+
+    const updated: FoodEntry = { ...entry, id: existing.id, createdAt: existing.createdAt };
+    store.put(updated);
+    await transactionDone(tx);
+
+    return updated;
+  }
+
   async function remove(id: string): Promise<void> {
     const db = await getDb();
     const tx = db.transaction(FOODS_STORE, 'readwrite');
@@ -74,6 +92,7 @@ export function createIndexedDbFoodStore(): FoodStore {
     list,
     listByDate,
     create,
+    update,
     remove,
     listRecentDistinct,
   };

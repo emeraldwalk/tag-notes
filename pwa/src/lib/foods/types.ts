@@ -13,6 +13,7 @@ export interface FoodStore {
   list(): Promise<FoodEntry[]>;
   listByDate(date: string): Promise<FoodEntry[]>;
   create(entry: Omit<FoodEntry, 'id' | 'createdAt'>): Promise<FoodEntry>;
+  update(id: string, entry: Omit<FoodEntry, 'id' | 'createdAt'>): Promise<FoodEntry>;
   remove(id: string): Promise<void>;
   /** Most recently logged entry for each distinct food name, newest first. */
   listRecentDistinct(): Promise<FoodEntry[]>;

@@ -107,6 +107,16 @@
   border-radius: 8px;
 }
 
+.cancelButton {
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #007aff;
+  background: #fff;
+  border: 1px solid #d1d1d6;
+  border-radius: 8px;
+}
+
 .sectionTitle {
   font-size: 0.85rem;
   font-weight: 600;
@@ -149,11 +159,20 @@
   border-radius: 8px;
 }
 
+.rowEditing {
+  background: #e5f1ff;
+}
+
 .rowMain {
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.2rem;
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: left;
 }
 
 .rowName {
