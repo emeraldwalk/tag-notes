@@ -8,8 +8,16 @@ body,
   height: 100%;
 }
 
+html {
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+}
+
 body {
   margin: 0;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
   font-family:
     -apple-system,
     BlinkMacSystemFont,
@@ -19,4 +27,5 @@ body {
     Arial,
     sans-serif;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
 }

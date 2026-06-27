@@ -117,135 +117,137 @@ function Food() {
   return (
     <div class={styles.container}>
       <NavBar title="Today" action={{ label: 'History', href: '/food/history' }} />
-      <div class={styles.stats}>
-        <div class={styles.remainingRow}>
-          <div class={styles.remainingCard}>
-            <div class={styles.remainingValue}>{remainingProtein()}g</div>
-            <div class={styles.remainingLabel}>protein left</div>
+      <div class={styles.body}>
+        <div class={styles.stats}>
+          <div class={styles.remainingRow}>
+            <div class={styles.remainingCard}>
+              <div class={styles.remainingValue}>{remainingProtein()}g</div>
+              <div class={styles.remainingLabel}>protein left</div>
+            </div>
+            <div class={styles.remainingCard}>
+              <div class={styles.remainingValue}>{remainingCalories()}</div>
+              <div class={styles.remainingLabel}>calories left</div>
+            </div>
           </div>
-          <div class={styles.remainingCard}>
-            <div class={styles.remainingValue}>{remainingCalories()}</div>
-            <div class={styles.remainingLabel}>calories left</div>
+          <div class={styles.detailRow}>
+            <span>
+              {Math.round(totals().protein)}g / {targets().protein}g protein
+            </span>
+            <span>
+              {Math.round(totals().calories)} / {targets().calories} cal
+            </span>
+            <span>{Math.round(totals().carbs)}g carbs</span>
           </div>
         </div>
-        <div class={styles.detailRow}>
-          <span>
-            {Math.round(totals().protein)}g / {targets().protein}g protein
-          </span>
-          <span>
-            {Math.round(totals().calories)} / {targets().calories} cal
-          </span>
-          <span>{Math.round(totals().carbs)}g carbs</span>
-        </div>
-      </div>
 
-      <form class={styles.form} onSubmit={(event) => void handleSubmit(event)}>
-        <input
-          type="text"
-          class={styles.nameInput}
-          placeholder="Food name"
-          value={form().name}
-          onInput={(event) => updateField('name', event.currentTarget.value)}
-        />
-        <div class={styles.macroRow}>
+        <form class={styles.form} onSubmit={(event) => void handleSubmit(event)}>
           <input
-            type="number"
-            inputmode="decimal"
-            class={styles.macroInput}
-            placeholder="Protein (g)"
-            value={form().protein}
-            onInput={(event) => updateField('protein', event.currentTarget.value)}
+            type="text"
+            class={styles.nameInput}
+            placeholder="Food name"
+            value={form().name}
+            onInput={(event) => updateField('name', event.currentTarget.value)}
           />
-          <input
-            type="number"
-            inputmode="decimal"
-            class={styles.macroInput}
-            placeholder="Calories (cal)"
-            value={form().calories}
-            onInput={(event) => updateField('calories', event.currentTarget.value)}
-          />
-          <input
-            type="number"
-            inputmode="decimal"
-            class={styles.macroInput}
-            placeholder="Carbs (g)"
-            value={form().carbs}
-            onInput={(event) => updateField('carbs', event.currentTarget.value)}
-          />
-        </div>
-        <div class={styles.quantityRow}>
-          <input
-            type="number"
-            inputmode="decimal"
-            class={styles.quantityInput}
-            placeholder="Qty"
-            value={form().quantity}
-            onInput={(event) => updateField('quantity', event.currentTarget.value)}
-          />
-          <button type="submit" class={styles.addButton}>
-            {editingId() ? 'Save Changes' : 'Add'}
-          </button>
-          <Show when={editingId()}>
-            <button type="button" class={styles.cancelButton} onClick={handleCancelEdit}>
-              Cancel
+          <div class={styles.macroRow}>
+            <input
+              type="number"
+              inputmode="decimal"
+              class={styles.macroInput}
+              placeholder="Protein (g)"
+              value={form().protein}
+              onInput={(event) => updateField('protein', event.currentTarget.value)}
+            />
+            <input
+              type="number"
+              inputmode="decimal"
+              class={styles.macroInput}
+              placeholder="Calories (cal)"
+              value={form().calories}
+              onInput={(event) => updateField('calories', event.currentTarget.value)}
+            />
+            <input
+              type="number"
+              inputmode="decimal"
+              class={styles.macroInput}
+              placeholder="Carbs (g)"
+              value={form().carbs}
+              onInput={(event) => updateField('carbs', event.currentTarget.value)}
+            />
+          </div>
+          <div class={styles.quantityRow}>
+            <input
+              type="number"
+              inputmode="decimal"
+              class={styles.quantityInput}
+              placeholder="Qty"
+              value={form().quantity}
+              onInput={(event) => updateField('quantity', event.currentTarget.value)}
+            />
+            <button type="submit" class={styles.addButton}>
+              {editingId() ? 'Save Changes' : 'Add'}
             </button>
-          </Show>
-        </div>
-      </form>
+            <Show when={editingId()}>
+              <button type="button" class={styles.cancelButton} onClick={handleCancelEdit}>
+                Cancel
+              </button>
+            </Show>
+          </div>
+        </form>
 
-      <Show when={recentFoods().length > 0}>
-        <div class={styles.recentSection}>
-          <div class={styles.sectionTitle}>Recent foods</div>
-          <div class={styles.recentList}>
-            <For each={recentFoods()}>
+        <Show when={recentFoods().length > 0}>
+          <div class={styles.recentSection}>
+            <div class={styles.sectionTitle}>Recent foods</div>
+            <div class={styles.recentList}>
+              <For each={recentFoods()}>
+                {(entry) => (
+                  <button
+                    type="button"
+                    class={styles.recentChip}
+                    onClick={() => handleSelectRecent(entry)}
+                  >
+                    {entry.name}
+                  </button>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
+
+        <Show
+          when={todayEntries().length > 0}
+          fallback={<div class={styles.emptyState}>No food logged today</div>}
+        >
+          <div class={styles.list}>
+            <For each={todayEntries()}>
               {(entry) => (
-                <button
-                  type="button"
-                  class={styles.recentChip}
-                  onClick={() => handleSelectRecent(entry)}
-                >
-                  {entry.name}
-                </button>
+                <div class={styles.row} classList={{ [styles.rowEditing]: editingId() === entry.id }}>
+                  <button type="button" class={styles.rowMain} onClick={() => handleEdit(entry)}>
+                    <div class={styles.rowName}>
+                      {entry.name}
+                      <Show when={entry.quantity !== 1}>
+                        <span class={styles.rowQuantity}> x{entry.quantity}</span>
+                      </Show>
+                    </div>
+                    <div class={styles.rowMacros}>
+                      {Math.round(entry.protein * entry.quantity)}g protein ·{' '}
+                      {Math.round(entry.calories * entry.quantity)} cal ·{' '}
+                      {Math.round(entry.carbs * entry.quantity)}g carbs
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    class={styles.removeButton}
+                    onClick={() => void handleRemove(entry.id)}
+                    aria-label={`Remove ${entry.name}`}
+                  >
+                    ×
+                  </button>
+                </div>
               )}
             </For>
           </div>
-        </div>
-      </Show>
-
-      <Show
-        when={todayEntries().length > 0}
-        fallback={<div class={styles.emptyState}>No food logged today</div>}
-      >
-        <div class={styles.list}>
-          <For each={todayEntries()}>
-            {(entry) => (
-              <div class={styles.row} classList={{ [styles.rowEditing]: editingId() === entry.id }}>
-                <button type="button" class={styles.rowMain} onClick={() => handleEdit(entry)}>
-                  <div class={styles.rowName}>
-                    {entry.name}
-                    <Show when={entry.quantity !== 1}>
-                      <span class={styles.rowQuantity}> x{entry.quantity}</span>
-                    </Show>
-                  </div>
-                  <div class={styles.rowMacros}>
-                    {Math.round(entry.protein * entry.quantity)}g protein ·{' '}
-                    {Math.round(entry.calories * entry.quantity)} cal ·{' '}
-                    {Math.round(entry.carbs * entry.quantity)}g carbs
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  class={styles.removeButton}
-                  onClick={() => void handleRemove(entry.id)}
-                  aria-label={`Remove ${entry.name}`}
-                >
-                  ×
-                </button>
-              </div>
-            )}
-          </For>
-        </div>
-      </Show>
+        </Show>
+      </div>
     </div>
   );
 }
