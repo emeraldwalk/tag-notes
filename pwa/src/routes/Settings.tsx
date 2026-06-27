@@ -90,7 +90,7 @@ function Settings() {
             />
           </label>
           <label class={styles.targetField}>
-            <span>Daily calorie target (kcal)</span>
+            <span>Daily calorie target (cal)</span>
             <input
               type="number"
               inputmode="decimal"

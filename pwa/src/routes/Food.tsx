@@ -133,7 +133,7 @@ function Food() {
             type="number"
             inputmode="decimal"
             class={styles.macroInput}
-            placeholder="Calories (kcal)"
+            placeholder="Calories (cal)"
             value={form().calories}
             onInput={(event) => updateField('calories', event.currentTarget.value)}
           />
