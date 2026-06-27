@@ -1,0 +1,37 @@
+.navBar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid #e5e5ea;
+}
+
+.side {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.sideRight {
+  justify-content: flex-end;
+}
+
+.title {
+  flex: 2;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.backButton,
+.actionButton {
+  color: #007aff;
+  text-decoration: none;
+  font-size: 1rem;
+  white-space: nowrap;
+}

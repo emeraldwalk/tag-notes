@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseNoteText } from './parse';
+import { parseNoteText, serializeNote } from './parse';
 
 describe('parseNoteText', () => {
   it('returns empty fields for an empty string', () => {
@@ -125,6 +125,47 @@ describe('parseNoteText', () => {
       title: 'My Title',
       body: 'body text',
       tags: [],
+    });
+  });
+});
+
+describe('serializeNote', () => {
+  it('serializes title only', () => {
+    expect(serializeNote('My Title', '', [])).toBe('My Title');
+  });
+
+  it('serializes title and body, no tags', () => {
+    expect(serializeNote('My Title', 'Some body', [])).toBe('My Title\n\nSome body');
+  });
+
+  it('serializes title and tags, no body', () => {
+    expect(serializeNote('My Title', '', ['foo', 'bar'])).toBe('My Title\n\n:foo, bar');
+  });
+
+  it('serializes title, body, and tags', () => {
+    expect(serializeNote('My Title', 'Some body', ['foo', 'bar'])).toBe(
+      'My Title\n\nSome body\n\n:foo, bar',
+    );
+  });
+
+  it('trims title and body whitespace', () => {
+    expect(serializeNote('  My Title  ', '  Some body  ', [])).toBe('My Title\n\nSome body');
+  });
+
+  it('dedupes and lowercases tags like parseTags', () => {
+    expect(serializeNote('Title', '', ['Foo', 'foo', 'BAR'])).toBe('Title\n\n:foo, bar');
+  });
+
+  it('omits empty tag entries', () => {
+    expect(serializeNote('Title', '', ['foo', '  ', 'bar'])).toBe('Title\n\n:foo, bar');
+  });
+
+  it('round-trips through parseNoteText', () => {
+    const rawText = serializeNote('My Title', 'Body line 1\nBody line 2', ['foo', 'bar']);
+    expect(parseNoteText(rawText)).toEqual({
+      title: 'My Title',
+      body: 'Body line 1\nBody line 2',
+      tags: ['foo', 'bar'],
     });
   });
 });

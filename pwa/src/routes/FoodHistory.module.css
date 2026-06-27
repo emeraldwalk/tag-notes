@@ -1,0 +1,73 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.dayList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.dayDate {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.dayTotals {
+  font-size: 0.8rem;
+  color: #8e8e93;
+}
+
+.entryList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.entryRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.entryName {
+  font-weight: 600;
+}
+
+.entryQuantity {
+  font-weight: 400;
+  color: #8e8e93;
+}
+
+.entryMacros {
+  color: #8e8e93;
+  white-space: nowrap;
+}
+
+.emptyState {
+  text-align: center;
+  color: #8e8e93;
+  padding: 2rem 1rem;
+}

@@ -1,10 +1,11 @@
 import { useNavigate } from '@solidjs/router';
 import { createMemo, createSignal, For, onMount, Show } from 'solid-js';
+import NavBar from '../components/NavBar';
 import { noteStore } from '../lib/notes/store-instance';
 import type { Note } from '../lib/notes/types';
-import styles from './List.module.css';
+import styles from './NoteHistory.module.css';
 
-function List() {
+function NoteHistory() {
   const navigate = useNavigate();
 
   const [notes, setNotes] = createSignal<Note[]>([]);
@@ -63,6 +64,7 @@ function List() {
 
   return (
     <div class={styles.container}>
+      <NavBar title="All Notes" backHref="/notes" backLabel="New" />
       <input
         type="search"
         class={styles.searchInput}
@@ -141,4 +143,4 @@ function List() {
   );
 }
 
-export default List;
+export default NoteHistory;

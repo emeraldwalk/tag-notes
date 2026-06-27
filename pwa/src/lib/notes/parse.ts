@@ -59,7 +59,28 @@ export function parseNoteText(rawText: string): ParsedNote {
   return { title, body, tags };
 }
 
-function parseTags(rawTagSegment: string): string[] {
+/**
+ * Builds rawText in the format `parseNoteText` expects, from separate
+ * title/body/tags fields. Round-trips: `parseNoteText(serializeNote(t, b, tags))`
+ * reproduces `{ title: t.trim(), body: b.trim(), tags: parseTags(tags.join(',')) }`.
+ */
+export function serializeNote(title: string, body: string, tags: string[]): string {
+  const parts = [title.trim()];
+
+  const trimmedBody = body.trim();
+  if (trimmedBody !== '') {
+    parts.push(trimmedBody);
+  }
+
+  const cleanTags = parseTags(tags.join(','));
+  if (cleanTags.length > 0) {
+    parts.push(`:${cleanTags.join(', ')}`);
+  }
+
+  return parts.join('\n\n');
+}
+
+export function parseTags(rawTagSegment: string): string[] {
   const seen = new Set<string>();
   const tags: string[] = [];
 

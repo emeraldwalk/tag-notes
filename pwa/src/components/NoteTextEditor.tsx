@@ -1,5 +1,5 @@
-import { createMemo, createSignal, Show } from 'solid-js';
-import { parseNoteText } from '../lib/notes/parse';
+import { createMemo, createSignal, For, Show } from 'solid-js';
+import { parseNoteText, parseTags, serializeNote } from '../lib/notes/parse';
 import styles from './NoteTextEditor.module.css';
 
 export interface NoteTextEditorProps {
@@ -13,17 +13,22 @@ export interface NoteTextEditorProps {
 }
 
 /**
- * Shared textarea + parsed title/tag preview + save action, used by both the
- * Home route (create mode) and NoteEditor route (edit mode).
+ * Dedicated title/body/tags inputs that serialize to the same single
+ * rawText note format under the hood, used by both the Home route (create
+ * mode) and NoteEditor route (edit mode).
  */
 function NoteTextEditor(props: NoteTextEditorProps) {
-  const [text, setText] = createSignal(props.initialText);
+  const initial = parseNoteText(props.initialText);
+
+  const [title, setTitle] = createSignal(initial.title);
+  const [body, setBody] = createSignal(initial.body);
+  const [tagsText, setTagsText] = createSignal(initial.tags.join(', '));
   const [saving, setSaving] = createSignal(false);
   const [justSaved, setJustSaved] = createSignal(false);
 
-  const parsed = createMemo(() => parseNoteText(text()));
+  const tags = createMemo(() => parseTags(tagsText()));
 
-  const canSave = createMemo(() => parsed().title.trim() !== '' && !saving());
+  const canSave = createMemo(() => title().trim() !== '' && !saving());
 
   const handleSave = async () => {
     if (!canSave()) return;
@@ -31,8 +36,10 @@ function NoteTextEditor(props: NoteTextEditorProps) {
     setSaving(true);
     setJustSaved(false);
     try {
-      await props.onSave(text());
-      setText('');
+      await props.onSave(serializeNote(title(), body(), tags()));
+      setTitle('');
+      setBody('');
+      setTagsText('');
       setJustSaved(true);
     } finally {
       setSaving(false);
@@ -46,36 +53,46 @@ function NoteTextEditor(props: NoteTextEditorProps) {
 
   return (
     <div class={styles.editor}>
-      <textarea
-        class={styles.textarea}
-        value={text()}
+      <input
+        type="text"
+        class={styles.titleInput}
+        value={title()}
         onInput={(event) => {
-          setText(event.currentTarget.value);
+          setTitle(event.currentTarget.value);
           setJustSaved(false);
         }}
-        placeholder="Title&#10;&#10;Body text...&#10;&#10;:tag1, tag2"
-        aria-label="Note text"
+        placeholder="Title"
+        aria-label="Note title"
       />
 
-      <div class={styles.preview}>
-        <Show
-          when={parsed().title.trim() !== ''}
-          fallback={<div class={`${styles.title} ${styles.titlePlaceholder}`}>Untitled</div>}
-        >
-          <div class={styles.title}>{parsed().title}</div>
-        </Show>
+      <textarea
+        class={styles.bodyTextarea}
+        value={body()}
+        onInput={(event) => {
+          setBody(event.currentTarget.value);
+          setJustSaved(false);
+        }}
+        placeholder="Body text..."
+        aria-label="Note body"
+      />
 
-        <Show
-          when={parsed().tags.length > 0}
-          fallback={<div class={styles.noTags}>no tags</div>}
-        >
-          <div class={styles.tags}>
-            {parsed().tags.map((tag) => (
-              <span class={styles.tag}>{tag}</span>
-            ))}
-          </div>
-        </Show>
-      </div>
+      <input
+        type="text"
+        class={styles.tagsInput}
+        value={tagsText()}
+        onInput={(event) => {
+          setTagsText(event.currentTarget.value);
+          setJustSaved(false);
+        }}
+        placeholder="tag1, tag2"
+        aria-label="Note tags"
+      />
+
+      <Show when={tags().length > 0}>
+        <div class={styles.tags}>
+          <For each={tags()}>{(tag) => <span class={styles.tag}>{tag}</span>}</For>
+        </div>
+      </Show>
 
       <Show when={justSaved()}>
         <div class={styles.savedMessage}>Saved</div>
