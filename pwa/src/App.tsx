@@ -20,7 +20,7 @@ function Shell(props: { children?: JSX.Element }) {
 
 function App() {
   return (
-    <Router root={Shell} base={import.meta.env.BASE_URL}>
+    <Router root={Shell} base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Route path="/" component={() => <Navigate href="/notes" />} />
       <Route path="/notes" component={NoteCreate} />
       <Route path="/notes/history" component={NoteHistory} />
