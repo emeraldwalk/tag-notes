@@ -2,19 +2,18 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches-ignore:
+      - gh-pages
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref == 'refs/heads/main' && 'main' || 'preview' }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -29,22 +28,36 @@ jobs:
         working-directory: pwa
         run: npm ci
 
-      - name: Build
+      - name: Build (production)
+        if: github.ref == 'refs/heads/main'
         working-directory: pwa
         run: npm run build
 
-      - uses: actions/configure-pages@v5
+      - name: Build (preview)
+        if: github.ref != 'refs/heads/main'
+        working-directory: pwa
+        env:
+          VITE_BASE_PATH: /tag-notes/preview/
+          VITE_APP_VARIANT: preview
+        run: npm run build
 
-      - uses: actions/upload-pages-artifact@v4
+      # Both jobs publish to the same gh-pages branch: production deploys to
+      # its root, every other branch overwrites the shared /preview/ subpath.
+      # keep_files keeps each deploy from wiping the other's directory.
+      - name: Deploy (production)
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: pwa/dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: pwa/dist
+          destination_dir: .
+          keep_files: true
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy (preview)
+        if: github.ref != 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: pwa/dist
+          destination_dir: preview
+          keep_files: true

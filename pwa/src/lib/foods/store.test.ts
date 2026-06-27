@@ -65,6 +65,47 @@ describe('createIndexedDbFoodStore', () => {
     expect(entries.map((e) => e.id)).toEqual([b.id, a.id]);
   });
 
+  it('update() overwrites fields while preserving id and createdAt', async () => {
+    const entry = await store.create({
+      name: 'A',
+      quantity: 1,
+      protein: 1,
+      calories: 1,
+      carbs: 1,
+      date: '2026-06-27',
+    });
+
+    const updated = await store.update(entry.id, {
+      name: 'A (revised)',
+      quantity: 2,
+      protein: 5,
+      calories: 50,
+      carbs: 10,
+      date: '2026-06-27',
+    });
+
+    expect(updated.id).toBe(entry.id);
+    expect(updated.createdAt).toBe(entry.createdAt);
+    expect(updated.name).toBe('A (revised)');
+    expect(updated.quantity).toBe(2);
+
+    const [stored] = await store.list();
+    expect(stored).toEqual(updated);
+  });
+
+  it('update() throws for an unknown id', async () => {
+    await expect(
+      store.update('missing-id', {
+        name: 'A',
+        quantity: 1,
+        protein: 1,
+        calories: 1,
+        carbs: 1,
+        date: '2026-06-27',
+      }),
+    ).rejects.toThrow();
+  });
+
   it('remove() deletes a food entry', async () => {
     const entry = await store.create({
       name: 'A',

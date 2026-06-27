@@ -20,6 +20,7 @@ function Food() {
   const [recentFoods, setRecentFoods] = createSignal<FoodEntry[]>([]);
   const [targets, setTargets] = createSignal(getFoodTargets());
   const [form, setForm] = createSignal<FormState>(EMPTY_FORM);
+  const [editingId, setEditingId] = createSignal<string | undefined>();
 
   const refresh = async () => {
     const [today, recent] = await Promise.all([
@@ -54,6 +55,7 @@ function Food() {
   };
 
   const handleSelectRecent = (entry: FoodEntry) => {
+    setEditingId(undefined);
     setForm({
       name: entry.name,
       protein: String(entry.protein),
@@ -63,26 +65,51 @@ function Food() {
     });
   };
 
+  const handleEdit = (entry: FoodEntry) => {
+    setEditingId(entry.id);
+    setForm({
+      name: entry.name,
+      protein: String(entry.protein),
+      calories: String(entry.calories),
+      carbs: String(entry.carbs),
+      quantity: String(entry.quantity),
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(undefined);
+    setForm(EMPTY_FORM);
+  };
+
   const handleSubmit = async (event: Event) => {
     event.preventDefault();
     const current = form();
     const name = current.name.trim();
     if (!name) return;
 
-    await foodStore.create({
+    const record = {
       name,
       quantity: Number(current.quantity) || 1,
       protein: Number(current.protein) || 0,
       calories: Number(current.calories) || 0,
       carbs: Number(current.carbs) || 0,
       date: todayDateKey(),
-    });
+    };
 
+    const id = editingId();
+    if (id) {
+      await foodStore.update(id, record);
+    } else {
+      await foodStore.create(record);
+    }
+
+    setEditingId(undefined);
     setForm(EMPTY_FORM);
     await refresh();
   };
 
   const handleRemove = async (id: string) => {
+    if (editingId() === id) handleCancelEdit();
     await foodStore.remove(id);
     await refresh();
   };
@@ -156,8 +183,13 @@ function Food() {
             onInput={(event) => updateField('quantity', event.currentTarget.value)}
           />
           <button type="submit" class={styles.addButton}>
-            Add
+            {editingId() ? 'Save Changes' : 'Add'}
           </button>
+          <Show when={editingId()}>
+            <button type="button" class={styles.cancelButton} onClick={handleCancelEdit}>
+              Cancel
+            </button>
+          </Show>
         </div>
       </form>
 
@@ -187,8 +219,8 @@ function Food() {
         <div class={styles.list}>
           <For each={todayEntries()}>
             {(entry) => (
-              <div class={styles.row}>
-                <div class={styles.rowMain}>
+              <div class={styles.row} classList={{ [styles.rowEditing]: editingId() === entry.id }}>
+                <button type="button" class={styles.rowMain} onClick={() => handleEdit(entry)}>
                   <div class={styles.rowName}>
                     {entry.name}
                     <Show when={entry.quantity !== 1}>
@@ -200,7 +232,7 @@ function Food() {
                     {Math.round(entry.calories * entry.quantity)} cal ·{' '}
                     {Math.round(entry.carbs * entry.quantity)}g carbs
                   </div>
-                </div>
+                </button>
                 <button
                   type="button"
                   class={styles.removeButton}
