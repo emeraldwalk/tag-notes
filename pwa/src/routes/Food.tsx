@@ -7,13 +7,21 @@ import styles from './Food.module.css';
 
 interface FormState {
   name: string;
+  servingSize: string;
   protein: string;
   calories: string;
   carbs: string;
   quantity: string;
 }
 
-const EMPTY_FORM: FormState = { name: '', protein: '', calories: '', carbs: '', quantity: '1' };
+const EMPTY_FORM: FormState = {
+  name: '',
+  servingSize: '',
+  protein: '',
+  calories: '',
+  carbs: '',
+  quantity: '1',
+};
 
 function Food() {
   const [todayEntries, setTodayEntries] = createSignal<FoodEntry[]>([]);
@@ -58,6 +66,7 @@ function Food() {
     setEditingId(undefined);
     setForm({
       name: entry.name,
+      servingSize: entry.servingSize ?? '',
       protein: String(entry.protein),
       calories: String(entry.calories),
       carbs: String(entry.carbs),
@@ -69,6 +78,7 @@ function Food() {
     setEditingId(entry.id);
     setForm({
       name: entry.name,
+      servingSize: entry.servingSize ?? '',
       protein: String(entry.protein),
       calories: String(entry.calories),
       carbs: String(entry.carbs),
@@ -87,8 +97,10 @@ function Food() {
     const name = current.name.trim();
     if (!name) return;
 
+    const servingSize = current.servingSize.trim();
     const record = {
       name,
+      servingSize: servingSize || undefined,
       quantity: Number(current.quantity) || 1,
       protein: Number(current.protein) || 0,
       calories: Number(current.calories) || 0,
@@ -148,28 +160,38 @@ function Food() {
             value={form().name}
             onInput={(event) => updateField('name', event.currentTarget.value)}
           />
+          <input
+            type="text"
+            class={styles.nameInput}
+            placeholder="Serving size (e.g. 1 cup)"
+            value={form().servingSize}
+            onInput={(event) => updateField('servingSize', event.currentTarget.value)}
+          />
           <div class={styles.macroRow}>
             <input
               type="number"
               inputmode="decimal"
+              step="any"
               class={styles.macroInput}
-              placeholder="Protein (g)"
+              placeholder="Pro (g)"
               value={form().protein}
               onInput={(event) => updateField('protein', event.currentTarget.value)}
             />
             <input
               type="number"
               inputmode="decimal"
+              step="any"
               class={styles.macroInput}
-              placeholder="Calories (cal)"
+              placeholder="Cal (cal)"
               value={form().calories}
               onInput={(event) => updateField('calories', event.currentTarget.value)}
             />
             <input
               type="number"
               inputmode="decimal"
+              step="any"
               class={styles.macroInput}
-              placeholder="Carbs (g)"
+              placeholder="Car (g)"
               value={form().carbs}
               onInput={(event) => updateField('carbs', event.currentTarget.value)}
             />
@@ -178,6 +200,7 @@ function Food() {
             <input
               type="number"
               inputmode="decimal"
+              step="any"
               class={styles.quantityInput}
               placeholder="Qty"
               value={form().quantity}
@@ -224,6 +247,9 @@ function Food() {
                   <button type="button" class={styles.rowMain} onClick={() => handleEdit(entry)}>
                     <div class={styles.rowName}>
                       {entry.name}
+                      <Show when={entry.servingSize}>
+                        <span class={styles.rowQuantity}> ({entry.servingSize})</span>
+                      </Show>
                       <Show when={entry.quantity !== 1}>
                         <span class={styles.rowQuantity}> x{entry.quantity}</span>
                       </Show>
