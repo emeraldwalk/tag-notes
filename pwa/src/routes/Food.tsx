@@ -169,27 +169,27 @@ function Food() {
           />
           <div class={styles.macroRow}>
             <input
-              type="number"
+              type="text"
               inputmode="decimal"
-              step="any"
+              pattern="[0-9]*\.?[0-9]*"
               class={styles.macroInput}
               placeholder="Pro (g)"
               value={form().protein}
               onInput={(event) => updateField('protein', event.currentTarget.value)}
             />
             <input
-              type="number"
+              type="text"
               inputmode="decimal"
-              step="any"
+              pattern="[0-9]*\.?[0-9]*"
               class={styles.macroInput}
               placeholder="Cal (cal)"
               value={form().calories}
               onInput={(event) => updateField('calories', event.currentTarget.value)}
             />
             <input
-              type="number"
+              type="text"
               inputmode="decimal"
-              step="any"
+              pattern="[0-9]*\.?[0-9]*"
               class={styles.macroInput}
               placeholder="Car (g)"
               value={form().carbs}
@@ -198,9 +198,9 @@ function Food() {
           </div>
           <div class={styles.quantityRow}>
             <input
-              type="number"
+              type="text"
               inputmode="decimal"
-              step="any"
+              pattern="[0-9]*\.?[0-9]*"
               class={styles.quantityInput}
               placeholder="Qty"
               value={form().quantity}
