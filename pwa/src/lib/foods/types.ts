@@ -1,6 +1,7 @@
 export interface FoodEntry {
   id: string; // generated, e.g. crypto.randomUUID()
   name: string;
+  servingSize?: string; // free-text description, e.g. "1 cup" or "100g"
   quantity: number;
   protein: number; // per single unit of quantity
   calories: number; // per single unit of quantity

@@ -7,6 +7,7 @@ import {
   parseExportFile,
 } from '../lib/notes/export';
 import { noteStore } from '../lib/notes/store-instance';
+import { refreshAppCache } from '../lib/refreshAppCache';
 import styles from './Settings.module.css';
 
 interface Status {
@@ -17,6 +18,7 @@ interface Status {
 function Settings() {
   const [noteCount, setNoteCount] = createSignal(0);
   const [status, setStatus] = createSignal<Status | undefined>();
+  const [refreshing, setRefreshing] = createSignal(false);
   const initialTargets = getFoodTargets();
   const [proteinTarget, setProteinTarget] = createSignal(String(initialTargets.protein));
   const [calorieTarget, setCalorieTarget] = createSignal(String(initialTargets.calories));
@@ -52,6 +54,11 @@ function Settings() {
     URL.revokeObjectURL(url);
 
     setStatus({ kind: 'success', message: `Exported ${notes.length} note(s).` });
+  };
+
+  const handleRefreshAppCache = async () => {
+    setRefreshing(true);
+    await refreshAppCache();
   };
 
   const handleFileChange = async (event: Event) => {
@@ -144,6 +151,25 @@ function Settings() {
         <p class={styles.hint}>
           Importing merges with existing notes: notes whose id matches an
           existing note replace it, others are added.
+        </p>
+      </section>
+
+      <section class={styles.section}>
+        <h2 class={styles.sectionTitle}>App</h2>
+        <div class={styles.actions}>
+          <button
+            type="button"
+            class={styles.actionButton}
+            disabled={refreshing()}
+            onClick={() => void handleRefreshAppCache()}
+          >
+            {refreshing() ? 'Refreshing…' : 'Refresh App'}
+          </button>
+        </div>
+        <p class={styles.hint}>
+          Clears the cached app files and reloads, so you get the latest
+          version. Your notes and food entries are stored separately and are
+          never affected.
         </p>
       </section>
     </div>
