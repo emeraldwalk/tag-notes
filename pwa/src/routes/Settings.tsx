@@ -1,11 +1,12 @@
 import { createSignal, onMount, Show } from 'solid-js';
-import { getFoodTargets, setFoodTargets } from '../lib/foods/targets';
 import {
   buildExportFile,
   exportFileName,
   InvalidExportFileError,
   parseExportFile,
-} from '../lib/notes/export';
+} from '../lib/export';
+import { foodStore } from '../lib/foods/store-instance';
+import { getFoodTargets, setFoodTargets } from '../lib/foods/targets';
 import { noteStore } from '../lib/notes/store-instance';
 import { refreshAppCache } from '../lib/refreshAppCache';
 import styles from './Settings.module.css';
@@ -17,6 +18,7 @@ interface Status {
 
 function Settings() {
   const [noteCount, setNoteCount] = createSignal(0);
+  const [foodCount, setFoodCount] = createSignal(0);
   const [status, setStatus] = createSignal<Status | undefined>();
   const [refreshing, setRefreshing] = createSignal(false);
   const initialTargets = getFoodTargets();
@@ -25,8 +27,13 @@ function Settings() {
   let fileInput: HTMLInputElement | undefined;
 
   const refreshCount = async () => {
-    setNoteCount((await noteStore.list()).length);
+    const [notes, foods] = await Promise.all([noteStore.list(), foodStore.list()]);
+    setNoteCount(notes.length);
+    setFoodCount(foods.length);
   };
+
+  const noteCountText = (count: number) => `${count} note${count === 1 ? '' : 's'}`;
+  const foodCountText = (count: number) => `${count} food ${count === 1 ? 'entry' : 'entries'}`;
 
   onMount(() => {
     void refreshCount();
@@ -42,8 +49,8 @@ function Settings() {
   };
 
   const handleExport = async () => {
-    const notes = await noteStore.list();
-    const file = buildExportFile(notes);
+    const [notes, foods] = await Promise.all([noteStore.list(), foodStore.list()]);
+    const file = buildExportFile({ notes, foods, foodTargets: getFoodTargets() });
     const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
@@ -53,7 +60,10 @@ function Settings() {
     link.click();
     URL.revokeObjectURL(url);
 
-    setStatus({ kind: 'success', message: `Exported ${notes.length} note(s).` });
+    setStatus({
+      kind: 'success',
+      message: `Exported ${noteCountText(notes.length)}, ${foodCountText(foods.length)} and food targets.`,
+    });
   };
 
   const handleRefreshAppCache = async () => {
@@ -67,10 +77,22 @@ function Settings() {
     if (!file) return;
 
     try {
-      const notes = parseExportFile(await file.text());
-      await noteStore.importAll(notes);
+      const bundle = parseExportFile(await file.text());
+      await noteStore.importAll(bundle.notes);
+      await foodStore.importAll(bundle.foods);
+      if (bundle.foodTargets) {
+        setFoodTargets(bundle.foodTargets);
+        setProteinTarget(String(bundle.foodTargets.protein));
+        setCalorieTarget(String(bundle.foodTargets.calories));
+      }
       await refreshCount();
-      setStatus({ kind: 'success', message: `Imported ${notes.length} note(s).` });
+      const counts = `${noteCountText(bundle.notes.length)}, ${foodCountText(bundle.foods.length)}`;
+      setStatus({
+        kind: 'success',
+        message: bundle.foodTargets
+          ? `Imported ${counts} and food targets.`
+          : `Imported ${counts}.`,
+      });
     } catch (err) {
       const message = err instanceof InvalidExportFileError ? err.message : 'Import failed.';
       setStatus({ kind: 'error', message });
@@ -115,15 +137,15 @@ function Settings() {
       <section class={styles.section}>
         <h2 class={styles.sectionTitle}>Data</h2>
         <p class={styles.noteCount}>
-          {noteCount()} note{noteCount() === 1 ? '' : 's'} stored
+          {noteCountText(noteCount())} and {foodCountText(foodCount())} stored
         </p>
 
         <div class={styles.actions}>
           <button type="button" class={styles.actionButton} onClick={() => void handleExport()}>
-            Export Notes
+            Export All
           </button>
           <button type="button" class={styles.actionButton} onClick={() => fileInput?.click()}>
-            Import Notes
+            Import
           </button>
         </div>
 
@@ -149,8 +171,10 @@ function Settings() {
         </Show>
 
         <p class={styles.hint}>
-          Importing merges with existing notes: notes whose id matches an
-          existing note replace it, others are added.
+          Export All saves notes, food entries and food targets in one file.
+          Importing merges with what's here: entries whose id matches an
+          existing one replace it, others are added. Food targets in the file
+          replace the current ones.
         </p>
       </section>
 

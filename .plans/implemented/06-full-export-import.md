@@ -1,9 +1,9 @@
 # 06 — Full export / import
 
-- [ ] Export file v2: notes, food entries and food targets in one file
-- [ ] `FoodStore.importAll`; import of v1 and v2 files
-- [ ] Settings: Export / Import cover everything
-- [ ] Tests
+- [x] Export file v2: notes, food entries and food targets in one file
+- [x] `FoodStore.importAll`; import of v1 and v2 files
+- [x] Settings: Export / Import cover everything
+- [x] Tests
 - [ ] Owner: push (ships to GitHub Pages), export a file from the installed app, keep it
 
 ## Goal

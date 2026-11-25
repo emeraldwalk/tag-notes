@@ -1,5 +1,5 @@
 import { DATE_INDEX, FOODS_STORE, openDatabase, requestToPromise, transactionDone } from '../db';
-import type { FoodEntry, FoodStore } from './types';
+import type { FoodEntry, FoodStore, ImportableFoodEntry } from './types';
 
 function sortByCreatedAtDesc(entries: FoodEntry[]): FoodEntry[] {
   return [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -88,6 +88,25 @@ export function createIndexedDbFoodStore(): FoodStore {
     return result;
   }
 
+  async function importAll(entries: ImportableFoodEntry[]): Promise<void> {
+    const db = await getDb();
+    const tx = db.transaction(FOODS_STORE, 'readwrite');
+    const store = tx.objectStore(FOODS_STORE);
+    const now = new Date().toISOString();
+
+    for (const entry of entries) {
+      const record: FoodEntry = {
+        ...entry,
+        id: entry.id ?? crypto.randomUUID(),
+        createdAt: entry.createdAt ?? now,
+      };
+      if (record.servingSize === undefined) delete record.servingSize;
+      store.put(record);
+    }
+
+    await transactionDone(tx);
+  }
+
   return {
     list,
     listByDate,
@@ -95,5 +114,6 @@ export function createIndexedDbFoodStore(): FoodStore {
     update,
     remove,
     listRecentDistinct,
+    importAll,
   };
 }

@@ -10,6 +10,19 @@ export interface FoodEntry {
   createdAt: string; // ISO 8601
 }
 
+/** A food entry read from an export file; missing `id`/`createdAt` are generated on import. */
+export interface ImportableFoodEntry {
+  id?: string;
+  name: string;
+  servingSize?: string; // free text, e.g. "1 cup"
+  quantity: number;
+  protein: number;
+  calories: number;
+  carbs: number;
+  date: string; // YYYY-MM-DD
+  createdAt?: string;
+}
+
 export interface FoodStore {
   list(): Promise<FoodEntry[]>;
   listByDate(date: string): Promise<FoodEntry[]>;
@@ -18,4 +31,6 @@ export interface FoodStore {
   remove(id: string): Promise<void>;
   /** Most recently logged entry for each distinct food name, newest first. */
   listRecentDistinct(): Promise<FoodEntry[]>;
+  /** Upsert by id; entries without an id or createdAt get generated ones. */
+  importAll(entries: ImportableFoodEntry[]): Promise<void>;
 }

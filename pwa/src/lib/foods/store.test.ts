@@ -153,4 +153,54 @@ describe('createIndexedDbFoodStore', () => {
     expect(recent[0].protein).toBe(6);
     expect(recent.map((e) => e.name.toLowerCase()).sort()).toEqual(['chicken', 'oats']);
   });
+  describe('importAll()', () => {
+    const base = { quantity: 1, protein: 1, calories: 1, carbs: 1, date: '2026-06-27' };
+
+    it('upserts by id, overwriting an existing entry', async () => {
+      const existing = await store.create({ ...base, name: 'Oats' });
+
+      await store.importAll([
+        { ...base, id: existing.id, name: 'Oats (imported)', servingSize: '1 cup', createdAt: existing.createdAt },
+        { ...base, id: 'imported-1', name: 'Eggs', createdAt: '2026-06-27T07:00:00.000Z' },
+      ]);
+
+      const entries = await store.list();
+      expect(entries).toHaveLength(2);
+      expect(entries.find((e) => e.id === existing.id)).toEqual({
+        ...base,
+        id: existing.id,
+        name: 'Oats (imported)',
+        servingSize: '1 cup',
+        createdAt: existing.createdAt,
+      });
+      expect(entries.find((e) => e.id === 'imported-1')?.createdAt).toBe('2026-06-27T07:00:00.000Z');
+
+      // Importing the same file again duplicates nothing.
+      await store.importAll([{ ...base, id: 'imported-1', name: 'Eggs' }]);
+      expect(await store.list()).toHaveLength(2);
+    });
+
+    it('generates missing id and createdAt', async () => {
+      await store.importAll([{ ...base, name: 'A' }, { ...base, name: 'B' }]);
+
+      const entries = await store.list();
+      expect(entries).toHaveLength(2);
+      expect(new Set(entries.map((e) => e.id)).size).toBe(2);
+      for (const entry of entries) {
+        expect(entry.id).toBeTruthy();
+        expect(() => new Date(entry.createdAt).toISOString()).not.toThrow();
+        expect(entry).not.toHaveProperty('servingSize');
+      }
+    });
+
+    it('imported entries are visible to listByDate()', async () => {
+      await store.importAll([
+        { ...base, id: 'x', name: 'X', date: '2026-06-20' },
+        { ...base, id: 'y', name: 'Y', date: '2026-06-21' },
+      ]);
+
+      expect((await store.listByDate('2026-06-20')).map((e) => e.id)).toEqual(['x']);
+      expect((await store.listByDate('2026-06-21')).map((e) => e.id)).toEqual(['y']);
+    });
+  });
 });
