@@ -54,13 +54,13 @@ Implement in this order, on `main`.
 
 | # | Plan | Depends on | Needs from the owner |
 | - | ---- | ---------- | -------------------- |
+| 9 | [Raw entries + ingest](pending/09-raw-entries-ingest.md) | 8 | Push; create a capture token in Settings and build the Siri Shortcut from the README |
 
 ## Not Ready
 
 | # | Plan | Description | Blocked on |
 | - | ---- | ----------- | ---------- |
 | 17 | Glucose CSV backfill | LibreView CSV export parsed in the browser (Settings), posted in batches as `source 'csv'` readings; history from before plan 14 | 8; a sample export to pin down the columns and date format |
-| 9 | Raw entries + ingest | `raw_entries` table and inbox UI; `POST /api/ingest/text` with per-source bearer tokens; Siri Shortcut (dictate → POST) documented | 8 |
 | 10 | Parse agent | Background parse of raw entries into proposals (food entries; medicine doses through plan 16's API); model config; proposals record their model | 9, 16; default model picked by testing real entries (see Model options below) |
 | 11 | Food tools + approval | Recent/approved foods, USDA FDC and Open Food Facts as agent tools; approve / correct proposals in the Food UI; approved items become reusable foods | 10 |
 | 12 | Kitchen voice | HA custom sentences + `rest_command` posting raw text to plan 9's route; docs for the HA side | 9; family-mail dash-10 phase 1 live |
