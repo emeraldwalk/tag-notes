@@ -54,7 +54,6 @@ Implement in this order, on `main`.
 
 | # | Plan | Depends on | Needs from the owner |
 | - | ---- | ---------- | -------------------- |
-| 8 | [Server storage](pending/08-server-storage.md) | 6, 7 | Import the file; later retire GitHub Pages and rename the repo |
 | 16 | [Medicine log](pending/16-medicine-log.md) | 8 | Set up medicines, convert `meds` notes |
 
 ## Not Ready
@@ -113,6 +112,7 @@ model id, API key), never hard-coded, and each proposal records the model that p
 | 7 | [Worker, D1, sign-in, deploy](implemented/07-worker-d1-sign-in-deploy.md) | ✅ Done; live at tracker.ingles.place (2026-11-24) |
 | 14 | [Glucose ingest](implemented/14-glucose-ingest.md) | ✅ Done; LibreLinkUp polling from the Worker works (2026-11-25), no HA fallback needed |
 | 6 | [Full export / import](implemented/06-full-export-import.md) | ✅ Done; owner still to push and export a file from the installed app |
+| 8 | [Server storage](implemented/08-server-storage.md) | ✅ Done; owner still to push, import plan 6's file, then have Claude retire GitHub Pages (delete `deploy.yml`) and rename the repo |
 
 The food log (Food, Food History, targets in Settings, editing an entry, serving size, the Refresh app button) was
 built without a plan and is on `main` (PRs #2–#5, and the `claude/gifted-pasteur-ok1yl7` merge on 2026-11-24).
