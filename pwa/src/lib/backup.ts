@@ -32,7 +32,7 @@ export interface ImportResult {
 }
 
 /** Rows (notes, foods, medicines, doses) per request, so each import request stays well inside the Worker's 10 ms of CPU. */
-export const IMPORT_CHUNK = 50; // 200 measured 16 ms of CPU in production (2026-11-25)
+export const IMPORT_CHUNK = 25; // measured in production (2026-11-25): 200 rows 16 ms; 50 notes 10 ms, 50 mixed 6 ms
 
 /**
  * Posts a parsed export file to `POST /api/import` in chunks (each a v2 file with part of the rows; targets go with
