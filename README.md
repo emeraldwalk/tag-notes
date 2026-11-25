@@ -28,7 +28,7 @@ After changing `worker/wrangler.jsonc`, run `npx wrangler types` from `worker/` 
 `worker-configuration.d.ts`.
 
 `node_modules` may be shared between a Mac and a Linux devcontainer; an install on one replaces the other's platform
-binaries (for example `@rollup/rollup-linux-x64-gnu`). Run `npm install` on the side you're working on.
+binaries (for example `@rollup/rollup-linux-x64-gnu`). That's fine: run `npm install` on the side you're working on.
 
 ## Deploying
 
