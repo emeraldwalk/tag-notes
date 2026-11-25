@@ -65,11 +65,28 @@ Implement in this order, on `main`.
 | - | ---- | ----------- | ---------- |
 | 17 | Glucose CSV backfill | LibreView CSV export parsed in the browser (Settings), posted in batches as `source 'csv'` readings; history from before plan 14 | 8; a sample export to pin down the columns and date format |
 | 9 | Raw entries + ingest | `raw_entries` table and inbox UI; `POST /api/ingest/text` with per-source bearer tokens; Siri Shortcut (dictate → POST) documented | 8 |
-| 10 | Parse agent | Background parse of raw entries into proposals (food entries; medicine doses through plan 16's API); model config; proposals record their model | 9, 16; default model picked by testing real entries |
+| 10 | Parse agent | Background parse of raw entries into proposals (food entries; medicine doses through plan 16's API); model config; proposals record their model | 9, 16; default model picked by testing real entries (see Model options below) |
 | 11 | Food tools + approval | Recent/approved foods, USDA FDC and Open Food Facts as agent tools; approve / correct proposals in the Food UI; approved items become reusable foods | 10 |
 | 12 | Kitchen voice | HA custom sentences + `rest_command` posting raw text to plan 9's route; docs for the HA side | 9; family-mail dash-10 phase 1 live |
 | 13 | Health ingest | Shortcuts automation → sample ingest route; `export.zip` backfill parsed in the browser | 8; confirm Shortcuts can read the sample types needed |
 | 15 | Reports | Daily timeline overlay, per-meal glucose response, sleep / exercise correlations, medicine timing | 11, 13, 14, 16, 17 |
+
+## Model options for plan 10
+
+Carried over from the old `/workspaces/tools/health-tracker` plan (2026-10). The model is config (provider, base URL,
+model id, API key), never hard-coded, and each proposal records the model that produced it so models can be compared.
+
+- **Workers AI** (current default): free daily allowance, no key, called through the Worker's `AI` binding.
+- **OpenCode Go** (paid subscription): budget open models through an OpenAI-compatible endpoint,
+  `https://opencode.ai/zen/go/v1`. Go requires clients to send a custom `User-Agent` and a stable
+  `x-opencode-session` header.
+- **OpenCode Zen free models: out.** OpenCode's servers reject free-tier calls from clients other than opencode
+  (HTTP 403). The known workarounds proxy through a local `opencode serve`, which we won't do.
+- A local Ollama model or any other OpenAI-compatible provider is a config swap. Ollama would need to be reachable
+  from the Worker, which means exposing something at home.
+- The old plan built the agent on pi's library layers (`@mariozechner/pi-ai` for a multi-provider LLM client,
+  `@mariozechner/pi-agent-core` for the tool-calling loop). Whether they run on Workers is unverified; a plain
+  tool-calling loop is fine too.
 
 ## Decisions (owner, 2026-11-24)
 
