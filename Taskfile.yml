@@ -13,5 +13,11 @@ tasks:
     silent: true
 
   start:
+    desc: Run the PWA dev server
     cmds:
-      - cd pwa && npm start
+      - npm start -w tracker-pwa
+
+  dev:worker:
+    desc: Run the Worker locally (wrangler dev)
+    cmds:
+      - npm run dev -w tracker-worker

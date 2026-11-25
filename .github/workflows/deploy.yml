@@ -22,24 +22,21 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: npm
-          cache-dependency-path: pwa/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: pwa
         run: npm ci
 
       - name: Build (production)
         if: github.ref == 'refs/heads/main'
-        working-directory: pwa
-        run: npm run build
+        run: npm run build -w tracker-pwa
 
       - name: Build (preview)
         if: github.ref != 'refs/heads/main'
-        working-directory: pwa
         env:
           VITE_BASE_PATH: /tag-notes/preview/
           VITE_APP_VARIANT: preview
-        run: npm run build
+        run: npm run build -w tracker-pwa
 
       # Both jobs publish to the same gh-pages branch: production deploys to
       # its root, every other branch overwrites the shared /preview/ subpath.

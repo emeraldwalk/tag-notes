@@ -1,10 +1,20 @@
 # 07 — Worker, D1, sign-in, deploy
 
-- [ ] Root npm workspaces (`pwa`, `worker`), one lock file; GitHub Pages workflow updated to match
-- [ ] `worker/` package: Hono Worker, wrangler config, D1 binding, IdP sign-in, placeholder page, `/api/me`
-- [ ] Tests (`@cloudflare/vitest-plugin`) and `npm run check` at the root
-- [ ] README: Deploying section, owner setup steps
+- [x] Root npm workspaces (`pwa`, `worker`), one lock file; GitHub Pages workflow updated to match
+- [x] `worker/` package: Hono Worker, wrangler config, D1 binding, IdP sign-in, placeholder page, `/api/me`
+- [x] Tests (`@cloudflare/vitest-plugin`) and `npm run check` at the root
+- [x] README: Deploying section, owner setup steps
 - [ ] Owner: IdP app registration, `wrangler d1 create`, secrets, Workers Builds project, push, live checks
+
+## Implementation notes (2026-11-24)
+
+- The build commit reaches the page through `wrangler deploy --var BUILD_COMMIT:${WORKERS_CI_COMMIT_SHA:-dev}` in
+  the `deploy` script (a plain var, `"dev"` in `wrangler.jsonc`), rather than `define` or a generated module.
+- `/api/*` signed out answers 401 for every path, including unknown ones, so nothing about the API shows before
+  sign-in. `requireAuth` from `@emeraldwalk/idp-client/hono` guards pages only, because it redirects GETs.
+- `worker/migrations/` holds only `.gitkeep`; the deploy's migrations step has nothing to apply until plan 14.
+- The root lock file was generated fresh, so the PWA's dependencies moved to the newest versions their ranges allow.
+  All 57 PWA tests pass on them.
 
 ## Goal
 

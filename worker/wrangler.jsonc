@@ -1,0 +1,30 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // Tracker (plan 07): notes, food, glucose and medicine for one person, at tracker.ingles.place, signed in through
+  // the family IdP. Secrets, set with `npx wrangler secret put <NAME>` from worker/: IDP_CLIENT_ID,
+  // IDP_CLIENT_SECRET, COOKIE_SECRET. See README "Deploying".
+  "name": "tracker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "routes": [{ "pattern": "tracker.ingles.place", "custom_domain": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tracker",
+      // Placeholder: the owner replaces it with the id `npx wrangler d1 create tracker` prints, then commits.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "IDP_ISSUER": "https://auth.emeraldwalk.com",
+    // The owner's time zone, for local dates. Not `TZ`, which is the container's.
+    "TZ_NAME": "America/Chicago",
+    // Overridden at deploy with the commit Workers Builds is building (package.json "deploy").
+    "BUILD_COMMIT": "dev"
+  }
+}

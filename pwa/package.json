@@ -1,5 +1,5 @@
 {
-  "name": "tag-notes-pwa",
+  "name": "tracker-pwa",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "oxlint .",
     "test": "vitest run",
-    "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg"
+    "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/logo.svg",
+    "check": "npm run lint && npm run build && npm test"
   },
   "dependencies": {
     "@solidjs/router": "^0.16.1",

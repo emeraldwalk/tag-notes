@@ -1,0 +1,11 @@
+{
+  "name": "tracker",
+  "private": true,
+  "workspaces": [
+    "pwa",
+    "worker"
+  ],
+  "scripts": {
+    "check": "npm run check --workspaces"
+  }
+}

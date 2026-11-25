@@ -1,6 +1,8 @@
 .claude
 
-pwa/node_modules/
+node_modules/
 pwa/dist/
 pwa/dev-dist/
 pwa/.vite/
+worker/.wrangler/
+worker/.dev.vars
