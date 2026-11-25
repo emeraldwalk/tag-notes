@@ -24,7 +24,7 @@ If a deployed change isn't showing up:
 ## Working in this repo (Tracker)
 
 - Read `README.md`, then `.plans/plan.md`. Load the `plan-orchestrating` skill to implement a plan, and the `solidjs`
-  skill for PWA work. Next plan: 9 (plans 6, 8 and 16 are done).
+  skill for PWA work. No plan is ready; the next ones (10, 12, 13, 17) need writing first (plans 6, 8, 16 and 9 are done).
 - **No GitHub or Cloudflare access from the devcontainer.** `git fetch` and `git push` fail, so local `origin/main`
   can be behind what's really pushed; don't read "ahead N" as unpushed work without asking. Claude commits and stops;
   the owner pushes, sets Worker secrets (`npx wrangler secret put <NAME>` from `worker/`) and runs anything needing

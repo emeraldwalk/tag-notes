@@ -54,7 +54,6 @@ Implement in this order, on `main`.
 
 | # | Plan | Depends on | Needs from the owner |
 | - | ---- | ---------- | -------------------- |
-| 9 | [Raw entries + ingest](pending/09-raw-entries-ingest.md) | 8 | Push; create a capture token in Settings and build the Siri Shortcut from the README |
 
 ## Not Ready
 
@@ -110,6 +109,7 @@ model id, API key), never hard-coded, and each proposal records the model that p
 | 5 | [list-and-tag-filter-and-editor.md](implemented/05-list-and-tag-filter-and-editor.md) | ✅ Done |
 | 7 | [Worker, D1, sign-in, deploy](implemented/07-worker-d1-sign-in-deploy.md) | ✅ Done; live at tracker.ingles.place (2026-11-24) |
 | 14 | [Glucose ingest](implemented/14-glucose-ingest.md) | ✅ Done; LibreLinkUp polling from the Worker works (2026-11-25), no HA fallback needed |
+| 9 | [Raw entries + ingest](implemented/09-raw-entries-ingest.md) | ✅ Done |
 | 6 | [Full export / import](implemented/06-full-export-import.md) | ✅ Done; owner still to push and export a file from the installed app |
 | 8 | [Server storage](implemented/08-server-storage.md) | ✅ Done; owner still to push, import plan 6's file, then have Claude retire GitHub Pages (delete `deploy.yml`) and rename the repo |
 | 16 | [Medicine log](implemented/16-medicine-log.md) | ✅ Done; owner still to push, add medicines and convert the `meds` notes |
