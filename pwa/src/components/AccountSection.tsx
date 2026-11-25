@@ -21,8 +21,10 @@ function AccountSection() {
             <dd>
               <code class={styles.id}>{m().sub}</code>
             </dd>
-            <dt>Build</dt>
+            <dt>Server build</dt>
             <dd>{m().build}</dd>
+            <dt>App build</dt>
+            <dd>{__APP_BUILD__}</dd>
           </dl>
         )}
       </Show>
