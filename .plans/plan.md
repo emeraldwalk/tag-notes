@@ -112,7 +112,7 @@ model id, API key), never hard-coded, and each proposal records the model that p
 | 4 | [home-note-entry.md](implemented/04-home-note-entry.md) | ✅ Done |
 | 5 | [list-and-tag-filter-and-editor.md](implemented/05-list-and-tag-filter-and-editor.md) | ✅ Done |
 | 7 | [Worker, D1, sign-in, deploy](implemented/07-worker-d1-sign-in-deploy.md) | ✅ Done; live at tracker.ingles.place (2026-11-24) |
-| 14 | [Glucose ingest](implemented/14-glucose-ingest.md) | ✅ Done (code); owner setup and the first live run (LibreLinkUp or the HA fallback) pending |
+| 14 | [Glucose ingest](implemented/14-glucose-ingest.md) | ✅ Done; LibreLinkUp polling from the Worker works (2026-11-25), no HA fallback needed |
 
 The food log (Food, Food History, targets in Settings, editing an entry, serving size, the Refresh app button) was
 built without a plan and is on `main` (PRs #2–#5, and the `claude/gifted-pasteur-ok1yl7` merge on 2026-11-24).

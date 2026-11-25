@@ -7,7 +7,7 @@
 - [x] `GET /api/glucose` and `GET /api/glucose/status` (signed in); placeholder page shows the last reading
 - [x] Tests
 - [x] README: secrets, the Libre follower setup, the fallback
-- [ ] Owner: follower account, secrets, `OWNER_USER_ID`, push, live checks — **first check decides LLU vs fallback**
+- [x] Owner: follower account, secrets, `OWNER_USER_ID`, push, live checks — **first check decides LLU vs fallback**
 
 ## Implementation notes (2026-11-24)
 
@@ -16,6 +16,14 @@
 - `OWNER_USER_ID` empty makes the cron record `no_owner_user_id` and the ingest route answer `503`, rather than
   storing readings under no one.
 - The HA fallback's config is already written, in `docs/home-assistant.md`, so switching needs no code.
+
+## Live result (2026-11-25)
+
+- LibreView accepts the Worker's requests: the first runs succeeded, so the Home Assistant fallback isn't used.
+- Readings were 2 hours behind at first because the Libre 3 app hadn't uploaded to LibreView; the LibreLinkUp app
+  showed the same. Opening the Libre 3 app caught both up. A gap like that is upstream of Tracker: the 15-minute
+  history fills it once LibreView has the data.
+- Still to check: CPU per cron run in `wrangler tail` (validation step 3).
 
 ## Goal
 
