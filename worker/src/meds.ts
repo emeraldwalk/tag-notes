@@ -262,29 +262,33 @@ export function medsApi(db: D1Database): Hono<AppEnv> {
     if (owned.length !== medicineIds.length) return invalid('A medicineId is not one of your medicines.');
 
     // Per note: a dose from it, only while it is this user's and still tagged; then the note (its tags cascade).
-    // One batch, so a failure leaves every note in place. A repeated note id converts once (the note is gone).
+    // One batch, so a failure leaves every note in place. The dose takes the note's id, so a note converted again
+    // (e.g. restored by re-importing an old export file) adds no second dose; the note is deleted only once its
+    // dose exists.
     const now = new Date().toISOString();
     const statements = pairs.flatMap(({ noteId, medicineId }) => [
       db
         .prepare(
-          `INSERT INTO doses (id, user_id, medicine_id, medicine_name, dose, taken_at, note, source, created_at)
-           SELECT ?, n.user_id, m.id, m.name, m.default_dose, n.created_at, n.raw_text, 'note', ?
+          `INSERT OR IGNORE INTO doses (id, user_id, medicine_id, medicine_name, dose, taken_at, note, source, created_at)
+           SELECT n.id, n.user_id, m.id, m.name, m.default_dose, n.created_at, n.raw_text, 'note', ?
            FROM notes n
            JOIN note_tags t ON t.note_id = n.id AND t.user_id = n.user_id AND t.tag = ?
            JOIN medicines m ON m.id = ? AND m.user_id = n.user_id
            WHERE n.id = ? AND n.user_id = ?`,
         )
-        .bind(crypto.randomUUID(), now, MEDS_TAG, medicineId, noteId, sub),
+        .bind(now, MEDS_TAG, medicineId, noteId, sub),
       db
         .prepare(
           `DELETE FROM notes WHERE id = ? AND user_id = ?
-           AND EXISTS (SELECT 1 FROM note_tags t WHERE t.note_id = notes.id AND t.user_id = notes.user_id AND t.tag = ?)`,
+           AND EXISTS (SELECT 1 FROM note_tags t WHERE t.note_id = notes.id AND t.user_id = notes.user_id AND t.tag = ?)
+           AND EXISTS (SELECT 1 FROM doses d WHERE d.id = notes.id AND d.user_id = notes.user_id)`,
         )
         .bind(noteId, sub, MEDS_TAG),
     ]);
     const results = await db.batch(statements);
     let converted = 0;
-    for (let i = 0; i < results.length; i += 2) if (results[i]!.meta.changes > 0) converted++;
+    // A note counts as converted when it was deleted: its dose was added now or by an earlier conversion.
+    for (let i = 1; i < results.length; i += 2) if (results[i]!.meta.changes > 0) converted++;
     return c.json({ converted, skipped: pairs.length - converted } satisfies ConvertResult, 200, noStore);
   });
 

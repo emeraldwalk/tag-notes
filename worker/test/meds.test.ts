@@ -255,6 +255,21 @@ describe('POST /api/doses/convert-notes', () => {
     expect(await doses(other)).toEqual([]);
   });
 
+  it('adds no second dose for a note restored by re-importing an old export and converted again', async () => {
+    const jar = await signIn(h, new Jar());
+    const met = await addMedicine(jar, { name: 'Metformin' });
+    const n1 = await addNote(jar, 'metformin\n\n:meds');
+    const exported = { app: 'tag-notes', version: 2, notes: [n1], foods: [] };
+    expect(await (await convert(jar, [{ noteIds: [n1.id], medicineId: met.id }])).json()).toEqual({ converted: 1, skipped: 0 });
+
+    expect((await sendJson(h, jar, 'POST', '/api/import', exported)).status).toBe(200);
+    expect(await noteIds(jar)).toEqual([n1.id]);
+    expect(await (await convert(jar, [{ noteIds: [n1.id], medicineId: met.id }])).json()).toEqual({ converted: 1, skipped: 0 });
+
+    expect(await noteIds(jar)).toEqual([]);
+    expect(await doses(jar)).toHaveLength(1);
+  });
+
   it('leaves every note in place when the request fails', async () => {
     const jar = await signIn(h, new Jar());
     const met = await addMedicine(jar, { name: 'Metformin' });
