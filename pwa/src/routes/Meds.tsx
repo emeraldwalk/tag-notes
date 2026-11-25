@@ -2,7 +2,12 @@ import { A } from '@solidjs/router';
 import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import DoseSheet, { type DoseSheetValues } from '../components/DoseSheet';
 import MedicineButton from '../components/MedicineButton';
+import EmptyState from '../components/EmptyState';
+import ListSection from '../components/ListSection';
+import Message from '../components/Message';
 import NavBar from '../components/NavBar';
+import NavButton from '../components/NavButton';
+import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
 import { medsStore } from '../lib/meds/store-instance';
 import { formatTime, todayRange } from '../lib/meds/time';
@@ -88,77 +93,65 @@ function Meds() {
   };
 
   return (
-    <div class={styles.container}>
-      <NavBar title="Meds" action={{ label: 'History', href: '/meds/history' }} />
-      <div class={styles.body}>
-        <section class={styles.today}>
-          <h2 class={styles.sectionTitle}>Today</h2>
-          <Show
-            when={today().length > 0}
-            fallback={<p class={styles.empty}>{loaded() ? 'Nothing logged today' : ''}</p>}
-          >
-            <ul class={styles.doseList}>
-              <For each={today()}>
-                {(dose) => (
-                  <li class={styles.doseRow}>
-                    <span class={styles.doseTime}>{formatTime(dose.takenAt)}</span>
-                    <span class={styles.doseName}>{dose.medicineName}</span>
-                    <span class={styles.doseAmount}>{dose.dose ?? ''}</span>
-                  </li>
-                )}
-              </For>
-            </ul>
-          </Show>
-        </section>
+    <Page nav={<NavBar title="Meds" trailing={<NavButton href="/meds/history">History</NavButton>} />}>
+      <Message kind="error" text={error()} />
 
-        <Show when={undo()}>
-          {(dose) => (
-            <div class={styles.undoBar} role="status">
-              <span>
-                Logged {dose().medicineName} at {formatTime(dose().takenAt)}
-              </span>
-              <button type="button" class={styles.undoButton} onClick={() => void handleUndo()}>
-                Undo
-              </button>
-            </div>
+      <section class={styles.buttons} aria-label="Log a medicine">
+        <For each={active()}>
+          {(medicine) => (
+            <MedicineButton
+              medicine={medicine}
+              disabled={logging()}
+              onTap={() => void handleTap(medicine)}
+              onMore={() => setSheet({ kind: 'medicine', medicine })}
+            />
           )}
-        </Show>
+        </For>
+        <button type="button" class={styles.otherButton} onClick={() => setSheet({ kind: 'other' })}>
+          Log something else
+        </button>
+      </section>
 
-        <Show when={error()}>
-          {(message) => (
-            <p class={styles.error} role="alert">
-              {message()}
-            </p>
-          )}
-        </Show>
+      <Show when={loaded() && active().length === 0}>
+        <p class={styles.hint}>
+          Add your medicines in <A href="/settings">Settings</A> to log them with one tap. Tap a medicine to log it now;
+          press and hold (or tap …) to pick the time or dose.
+        </p>
+      </Show>
 
-        <section class={styles.buttons}>
-          <For each={active()}>
-            {(medicine) => (
-              <MedicineButton
-                medicine={medicine}
-                disabled={logging()}
-                onTap={() => void handleTap(medicine)}
-                onMore={() => setSheet({ kind: 'medicine', medicine })}
-              />
-            )}
-          </For>
-          <button type="button" class={styles.otherButton} onClick={() => setSheet({ kind: 'other' })}>
-            Log something else
-          </button>
-        </section>
-
-        <Show when={loaded() && active().length === 0}>
-          <p class={styles.hint}>
-            Add your medicines in <A href="/settings">Settings → Medicines</A> to log them with one tap.
-          </p>
+      <Show when={loaded()}>
+        <Show when={today().length > 0} fallback={<EmptyState>Nothing logged today.</EmptyState>}>
+          <ListSection title="Today">
+            <For each={today()}>
+              {(dose) => (
+                <div class={styles.doseRow}>
+                  <span class={styles.doseTime}>{formatTime(dose.takenAt)}</span>
+                  <span class={styles.doseName}>{dose.medicineName}</span>
+                  <span class={styles.doseAmount}>{dose.dose ?? ''}</span>
+                </div>
+              )}
+            </For>
+          </ListSection>
         </Show>
-      </div>
+      </Show>
+
+      <Show when={undo()}>
+        {(dose) => (
+          <div class={styles.toast} role="status">
+            <span>
+              Logged {dose().medicineName} at {formatTime(dose().takenAt)}
+            </span>
+            <button type="button" class={styles.undoButton} onClick={() => void handleUndo()}>
+              Undo
+            </button>
+          </div>
+        )}
+      </Show>
 
       <Show when={sheet()}>
         {(current) => (
           <DoseSheet
-            title={sheetMedicine(current())?.name ?? 'Log something else'}
+            title={sheetMedicine(current())?.name ?? 'Other Medicine'}
             askName={current().kind === 'other'}
             initial={{ takenAt: new Date().toISOString(), dose: sheetMedicine(current())?.defaultDose }}
             saveLabel="Log"
@@ -167,7 +160,7 @@ function Meds() {
           />
         )}
       </Show>
-    </div>
+    </Page>
   );
 }
 

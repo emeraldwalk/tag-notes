@@ -5,6 +5,9 @@ import { medsStore } from '../lib/meds/store-instance';
 import { formatDay, takenDay } from '../lib/meds/time';
 import type { Medicine } from '../lib/meds/types';
 import { noteStore } from '../lib/notes/store-instance';
+import Button from './Button';
+import ListSection from './ListSection';
+import Message from './Message';
 import styles from './ConvertMedsSection.module.css';
 
 export interface ConvertMedsSectionProps {
@@ -12,9 +15,6 @@ export interface ConvertMedsSectionProps {
   version: number;
   /** Called after converting (new medicines may have been added). */
   onConverted: () => void;
-  /** Settings' section and heading classes (the section, heading included, shows only while there are notes). */
-  sectionClass: string;
-  titleClass: string;
 }
 
 const NEW = 'new';
@@ -32,7 +32,8 @@ const range = (group: NoteGroup) => {
 
 /**
  * Settings → Convert medicine notes: `meds`-tagged notes, grouped by title; each group becomes doses of a medicine
- * (or is skipped), and the converted notes are deleted. Renders nothing while there are no such notes.
+ * (or is skipped), and the converted notes are deleted. The whole section shows only while there are such notes
+ * (or a result to report).
  */
 function ConvertMedsSection(props: ConvertMedsSectionProps) {
   const [groups, setGroups] = createSignal<NoteGroup[]>([]);
@@ -116,71 +117,61 @@ function ConvertMedsSection(props: ConvertMedsSectionProps) {
 
   return (
     <Show when={groups().length > 0 || status()}>
-      <section class={props.sectionClass}>
-        <h2 class={props.titleClass}>Convert medicine notes</h2>
-        <div class={styles.root}>
-        <Show when={groups().length > 0}>
-          <p class={styles.hint}>
-            Notes tagged <code>{MEDS_TAG}</code>, grouped by title. Each group becomes doses of the medicine you pick,
-            at the time the note was written; the notes are then deleted.
-          </p>
-          <ul class={styles.list}>
-            <For each={groups()}>
-              {(group) => (
-                <li class={styles.group}>
-                  <div class={styles.groupInfo}>
-                    <span class={styles.groupTitle}>{group.title}</span>
-                    <span class={styles.groupMeta}>
-                      {group.notes.length} note{group.notes.length === 1 ? '' : 's'} · {range(group)}
-                    </span>
-                  </div>
-                  <select
-                    class={styles.select}
-                    aria-label={`Medicine for ${group.title}`}
-                    onChange={(event) => {
-                      const value = event.currentTarget.value;
-                      setChoices((current) => ({ ...current, [group.key]: choiceFrom(value) }));
-                    }}
-                  >
-                    {/* `selected` per option: a `value` on the select would be set before its options exist. */}
-                    <For each={medicines()}>
-                      {(m) => (
-                        <option value={m.id} selected={chosen(group) === m.id}>
-                          {m.name}
-                        </option>
-                      )}
-                    </For>
-                    <Show when={!medicines().some((m) => groupKey(m.name) === group.key)}>
-                      <option value={NEW} selected={chosen(group) === NEW}>
-                        New medicine named “{group.title}”
-                      </option>
-                    </Show>
-                    <option value={SKIP} selected={chosen(group) === SKIP}>
-                      Skip
+      <ListSection
+        title="Convert medicine notes"
+        footer={
+          <Show when={groups().length > 0}>
+            Notes tagged <code>{MEDS_TAG}</code>, grouped by title. Each group becomes doses of the medicine you pick, at
+            the time the note was written; the notes are then deleted.
+          </Show>
+        }
+      >
+        <For each={groups()}>
+          {(group) => (
+            <div class={styles.group}>
+              <div class={styles.groupInfo}>
+                <span class={styles.groupTitle}>{group.title}</span>
+                <span class={styles.groupMeta}>
+                  {group.notes.length} note{group.notes.length === 1 ? '' : 's'} · {range(group)}
+                </span>
+              </div>
+              <select
+                class={styles.select}
+                aria-label={`Medicine for ${group.title}`}
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  setChoices((current) => ({ ...current, [group.key]: choiceFrom(value) }));
+                }}
+              >
+                {/* `selected` per option: a `value` on the select would be set before its options exist. */}
+                <For each={medicines()}>
+                  {(m) => (
+                    <option value={m.id} selected={chosen(group) === m.id}>
+                      {m.name}
                     </option>
-                  </select>
-                </li>
-              )}
-            </For>
-          </ul>
-          <button
-            type="button"
-            class={styles.primary}
-            disabled={busy() || noteTotal() === 0}
-            onClick={() => void handleConvert()}
-          >
-            {busy() ? 'Converting…' : `Convert ${noteTotal()} note${noteTotal() === 1 ? '' : 's'}`}
-          </button>
-        </Show>
-        <Show when={status()}>
-          {(current) => (
-            <p classList={{ [styles.success]: current().kind === 'success', [styles.error]: current().kind === 'error' }}>
-              {current().message}
-            </p>
+                  )}
+                </For>
+                <Show when={!medicines().some((m) => groupKey(m.name) === group.key)}>
+                  <option value={NEW} selected={chosen(group) === NEW}>
+                    New medicine named “{group.title}”
+                  </option>
+                </Show>
+                <option value={SKIP} selected={chosen(group) === SKIP}>
+                  Skip
+                </option>
+              </select>
+            </div>
           )}
-        </Show>
+        </For>
+        <div class={styles.actions}>
+          <Show when={groups().length > 0}>
+            <Button disabled={busy() || noteTotal() === 0} onClick={() => void handleConvert()}>
+              {busy() ? 'Converting…' : `Convert ${noteTotal()} Note${noteTotal() === 1 ? '' : 's'}`}
+            </Button>
+          </Show>
+          <Message kind={status()?.kind ?? 'success'} text={status()?.message} />
         </div>
-      </section>
+      </ListSection>
     </Show>
   );
 }

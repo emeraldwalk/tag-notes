@@ -1,26 +1,10 @@
-.root {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 .item {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.6rem;
-  background: #fff;
-  border-radius: 8px;
+  gap: var(--space-s);
+  min-height: var(--hit);
+  padding: var(--space-s) var(--space-s) var(--space-s) var(--space-l);
 }
 
 .details {
@@ -36,45 +20,28 @@
 }
 
 .meta {
-  font-size: 0.8rem;
-  color: #8e8e93;
+  font-size: var(--font-footnote);
+  color: var(--color-secondary);
 }
 
 .revoked .name {
-  color: #8e8e93;
+  color: var(--color-secondary);
   text-decoration: line-through;
 }
 
-.revoke,
-.button {
-  padding: 0.3rem 0.7rem;
-  font-size: 0.9rem;
-  border: none;
-  border-radius: 6px;
-  background: #f2f2f7;
-}
-
 .revoke {
-  color: #ff3b30;
-}
-
-.button {
-  color: #007aff;
-}
-
-.revoke:disabled,
-.button:disabled {
-  color: #c7c7cc;
+  color: var(--color-danger);
 }
 
 .secretBox {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #fffbe6;
-  border: 1px solid #f0d77a;
-  border-radius: 8px;
+  gap: var(--space-s);
+  margin: var(--space-s) var(--space-l);
+  padding: var(--space-m);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-control);
 }
 
 .secretTitle {
@@ -83,8 +50,8 @@
 }
 
 .secret {
-  padding: 0.5rem;
-  background: #fff;
+  padding: var(--space-s);
+  background: var(--color-surface);
   border-radius: 6px;
   font-size: 0.85rem;
   overflow-wrap: anywhere;
@@ -93,38 +60,26 @@
 
 .secretActions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-s);
 }
 
 .warning {
   margin: 0;
-  font-size: 0.8rem;
-  color: #8a6d00;
+  font-size: var(--font-footnote);
+  color: var(--color-warning-text);
 }
 
 .addForm {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 0.5rem;
+  gap: var(--space-s);
+  padding: var(--space-m) var(--space-l);
 }
 
-.input {
-  width: 100%;
-  padding: 0.5rem 0.8rem;
-  font-size: 1rem;
-  border: 1px solid #d1d1d6;
-  border-radius: 8px;
-  background: #fff;
+.message {
+  grid-column: 1 / -1;
 }
 
-.error {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #ff3b30;
-}
-
-.hint {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #8e8e93;
+.message:empty {
+  display: none;
 }

@@ -1,0 +1,24 @@
+.title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.body {
+  flex: 1;
+  min-height: 10rem;
+  resize: none;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag {
+  padding: 0.15rem 0.6rem;
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
+  border-radius: 999px;
+  font-size: var(--font-footnote);
+}

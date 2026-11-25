@@ -1,6 +1,7 @@
 import { createResource, Show } from 'solid-js';
 import { getGlucoseStatus } from '../lib/account';
 import { errorMessage } from '../lib/api';
+import Message from './Message';
 import styles from './GlucoseSection.module.css';
 
 const ARROWS: Record<number, string> = { 1: '↓', 2: '↘', 3: '→', 4: '↗', 5: '↑' };
@@ -14,9 +15,7 @@ function GlucoseSection() {
 
   return (
     <div class={styles.root}>
-      <Show when={status.error}>
-        <p class={styles.error}>{errorMessage(status.error)}</p>
-      </Show>
+      <Message kind="error" text={status.error ? errorMessage(status.error) : undefined} />
       <Show when={status()}>
         {(s) => (
           <dl class={styles.list}>

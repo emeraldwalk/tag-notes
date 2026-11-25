@@ -1,41 +1,42 @@
 import { A } from '@solidjs/router';
-import { Show } from 'solid-js';
+import { type JSX, Show } from 'solid-js';
 import styles from './NavBar.module.css';
 
-export interface NavBarAction {
-  label: string;
+export interface NavBarBack {
   href: string;
+  /** The previous screen's title. */
+  label: string;
 }
 
 export interface NavBarProps {
   title: string;
-  /** Shows a "‹ {backLabel}" link on the left, navigating to this href. */
-  backHref?: string;
-  backLabel?: string;
-  /** Shows a link on the right, e.g. to push into a section's secondary screen. */
-  action?: NavBarAction;
+  /** A "‹ Label" back button on the left. */
+  back?: NavBarBack;
+  /** Anything else on the left (e.g. Cancel on a compose screen); used when there's no `back`. */
+  leading?: JSX.Element;
+  /** Buttons on the right: NavButton. */
+  trailing?: JSX.Element;
 }
 
-/** iOS-style nav bar: back button on the left, title centered, action on the right. */
+/** iOS-style nav bar: back (or leading) on the left, title centered, actions on the right. */
 function NavBar(props: NavBarProps) {
   return (
-    <div class={styles.navBar}>
+    <header class={styles.navBar}>
       <div class={styles.side}>
-        <Show when={props.backHref}>
-          <A href={props.backHref!} class={styles.backButton}>
-            ‹ {props.backLabel ?? 'Back'}
-          </A>
+        <Show when={props.back} fallback={props.leading}>
+          {(back) => (
+            <A href={back().href} class={styles.back}>
+              <svg class={styles.chevron} viewBox="0 0 12 21" aria-hidden="true">
+                <path d="M10.5 1.5 1.5 10.5l9 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span class={styles.backLabel}>{back().label}</span>
+            </A>
+          )}
         </Show>
       </div>
-      <div class={styles.title}>{props.title}</div>
-      <div class={`${styles.side} ${styles.sideRight}`}>
-        <Show when={props.action}>
-          <A href={props.action!.href} class={styles.actionButton}>
-            {props.action!.label}
-          </A>
-        </Show>
-      </div>
-    </div>
+      <h1 class={styles.title}>{props.title}</h1>
+      <div class={`${styles.side} ${styles.sideRight}`}>{props.trailing}</div>
+    </header>
   );
 }
 

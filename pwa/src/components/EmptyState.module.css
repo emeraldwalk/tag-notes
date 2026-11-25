@@ -1,0 +1,7 @@
+.empty {
+  margin: 0;
+  padding: var(--space-xl) var(--space-l);
+  text-align: center;
+  font-size: var(--font-callout);
+  color: var(--color-secondary);
+}

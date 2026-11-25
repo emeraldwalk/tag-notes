@@ -1,18 +1,17 @@
-import NavBar from '../components/NavBar';
-import NoteTextEditor from '../components/NoteTextEditor';
+import NoteForm from '../components/NoteForm';
 import { noteStore } from '../lib/notes/store-instance';
-import styles from './NoteCreate.module.css';
 
+/** New note, pushed from the Notes list's compose button. */
 function NoteCreate() {
-  const handleSave = async (rawText: string) => {
-    await noteStore.create(rawText);
-  };
-
   return (
-    <div class={styles.page}>
-      <NavBar title="New Note" action={{ label: 'History', href: '/notes/history' }} />
-      <NoteTextEditor initialText="" onSave={handleSave} />
-    </div>
+    <NoteForm
+      title="New Note"
+      initialText=""
+      doneHref="/notes"
+      onSave={async (rawText) => {
+        await noteStore.create(rawText);
+      }}
+    />
   );
 }
 

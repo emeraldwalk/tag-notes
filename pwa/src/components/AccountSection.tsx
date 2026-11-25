@@ -1,6 +1,7 @@
 import { createResource, Show } from 'solid-js';
 import { getMe, LOGOUT_URL } from '../lib/account';
 import { errorMessage } from '../lib/api';
+import Message from './Message';
 import styles from './AccountSection.module.css';
 
 /** Who is signed in, the build, and Sign out. */
@@ -9,9 +10,7 @@ function AccountSection() {
 
   return (
     <div class={styles.root}>
-      <Show when={me.error}>
-        <p class={styles.error}>{errorMessage(me.error)}</p>
-      </Show>
+      <Message kind="error" text={me.error ? errorMessage(me.error) : undefined} />
       <Show when={me()}>
         {(m) => (
           <dl class={styles.list}>
@@ -30,7 +29,7 @@ function AccountSection() {
       </Show>
       {/* rel="external": a full page load to the Worker, not a client-side route. */}
       <a class={styles.signOut} href={LOGOUT_URL} rel="external">
-        Sign out
+        Sign Out
       </a>
     </div>
   );

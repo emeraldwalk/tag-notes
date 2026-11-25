@@ -1,4 +1,7 @@
-import { createSignal, onMount, Show } from 'solid-js';
+import { createSignal, createUniqueId, onMount, Show } from 'solid-js';
+import Button from './Button';
+import Field from './Field';
+import Message from './Message';
 import { fromLocalInput, localInputValue } from '../lib/meds/time';
 import styles from './DoseSheet.module.css';
 
@@ -29,6 +32,7 @@ export interface DoseSheetProps {
  */
 function DoseSheet(props: DoseSheetProps) {
   let dialog: HTMLDialogElement | undefined;
+  const titleId = createUniqueId();
   const [name, setName] = createSignal('');
   const [time, setTime] = createSignal(localInputValue(props.initial.takenAt));
   const [dose, setDose] = createSignal(props.initial.dose ?? '');
@@ -68,66 +72,58 @@ function DoseSheet(props: DoseSheetProps) {
   };
 
   return (
-    <dialog ref={dialog} class={styles.sheet} onClose={() => props.onClose()}>
+    <dialog
+      ref={dialog}
+      class={styles.sheet}
+      aria-labelledby={titleId}
+      onClose={() => props.onClose()}
+      onClick={(event) => {
+        // A tap on the backdrop (the dialog itself, outside the form) closes it, like an iOS sheet.
+        if (event.target === dialog) dialog.close();
+      }}
+    >
       <form class={styles.form} onSubmit={handleSubmit}>
-        <h2 class={styles.title}>{props.title}</h2>
-        <Show when={props.askName}>
-          <label class={styles.field}>
-            <span>Name</span>
-            <input
-              type="text"
-              class={styles.input}
-              placeholder="e.g. Ibuprofen"
-              value={name()}
-              onInput={(event) => setName(event.currentTarget.value)}
-            />
-          </label>
-        </Show>
-        <label class={styles.field}>
-          <span>Taken at</span>
-          <input
-            type="datetime-local"
-            class={styles.input}
-            value={time()}
-            onInput={(event) => setTime(event.currentTarget.value)}
-          />
-        </label>
-        <label class={styles.field}>
-          <span>Dose</span>
-          <input
-            type="text"
-            class={styles.input}
-            placeholder="e.g. 500 mg"
-            value={dose()}
-            onInput={(event) => setDose(event.currentTarget.value)}
-          />
-        </label>
-        <label class={styles.field}>
-          <span>Note</span>
-          <textarea class={styles.textarea} rows={2} value={note()} onInput={(event) => setNote(event.currentTarget.value)} />
-        </label>
-        <Show when={error()}>
-          {(message) => (
-            <p class={styles.error} role="alert">
-              {message()}
-            </p>
-          )}
-        </Show>
-        <div class={styles.actions}>
-          <button type="button" class={styles.secondary} onClick={() => dialog?.close()}>
+        <header class={styles.header}>
+          <button type="button" class={styles.headerButton} onClick={() => dialog?.close()}>
             Cancel
           </button>
-          <button type="submit" class={styles.primary} disabled={busy()}>
+          <h2 id={titleId} class={styles.title}>
+            {props.title}
+          </h2>
+          <button type="submit" class={`${styles.headerButton} ${styles.headerPrimary}`} disabled={busy()}>
             {props.saveLabel ?? 'Save'}
           </button>
+        </header>
+        <div class={styles.fields}>
+          <Show when={props.askName}>
+            <Field label="Name">
+              <input type="text" placeholder="e.g. Ibuprofen" value={name()} onInput={(event) => setName(event.currentTarget.value)} />
+            </Field>
+          </Show>
+          <Field label="Taken at">
+            <input type="datetime-local" value={time()} onInput={(event) => setTime(event.currentTarget.value)} />
+          </Field>
+          <Field label="Dose">
+            <input type="text" placeholder="e.g. 500 mg" value={dose()} onInput={(event) => setDose(event.currentTarget.value)} />
+          </Field>
+          <Field label="Note">
+            <textarea rows={2} value={note()} onInput={(event) => setNote(event.currentTarget.value)} />
+          </Field>
+          <Message kind="error" text={error()} />
+          <Show when={props.onDelete}>
+            {(remove) => (
+              <Button
+                variant="destructive"
+                disabled={busy()}
+                onClick={() => {
+                  if (window.confirm('Delete this dose?')) void run(remove());
+                }}
+              >
+                Delete Dose
+              </Button>
+            )}
+          </Show>
         </div>
-        <Show when={props.onDelete}>
-          {(remove) => (
-            <button type="button" class={styles.danger} disabled={busy()} onClick={() => void run(remove())}>
-              Delete
-            </button>
-          )}
-        </Show>
       </form>
     </dialog>
   );

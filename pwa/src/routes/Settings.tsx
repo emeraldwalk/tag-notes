@@ -1,9 +1,15 @@
-import { createSignal, onMount, Show } from 'solid-js';
+import { createSignal, onMount } from 'solid-js';
 import AccountSection from '../components/AccountSection';
+import Button from '../components/Button';
 import CaptureSourcesSection from '../components/CaptureSourcesSection';
 import ConvertMedsSection from '../components/ConvertMedsSection';
+import Field from '../components/Field';
 import GlucoseSection from '../components/GlucoseSection';
+import ListSection from '../components/ListSection';
 import MedicinesSection from '../components/MedicinesSection';
+import Message from '../components/Message';
+import NavBar from '../components/NavBar';
+import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
 import { exportAll, importBundle } from '../lib/backup';
 import { exportFileName, parseExportFile } from '../lib/export';
@@ -22,6 +28,8 @@ function Settings() {
   const [noteCount, setNoteCount] = createSignal(0);
   const [foodCount, setFoodCount] = createSignal(0);
   const [status, setStatus] = createSignal<Status | undefined>();
+  /** Food targets' own status, shown next to their Save button (not down in Data). */
+  const [targetsStatus, setTargetsStatus] = createSignal<Status | undefined>();
   const [refreshing, setRefreshing] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   const [proteinTarget, setProteinTarget] = createSignal('');
@@ -49,7 +57,7 @@ function Settings() {
       setProteinTarget(String(targets.protein));
       setCalorieTarget(String(targets.calories));
     } catch (err) {
-      showError(err);
+      setTargetsStatus({ kind: 'error', message: errorMessage(err) });
     }
   };
 
@@ -63,14 +71,15 @@ function Settings() {
 
   const handleSaveTargets = async (event: Event) => {
     event.preventDefault();
+    setTargetsStatus(undefined);
     try {
       await setFoodTargets({
         protein: Number(proteinTarget()) || 0,
         calories: Number(calorieTarget()) || 0,
       });
-      setStatus({ kind: 'success', message: 'Food targets saved.' });
+      setTargetsStatus({ kind: 'success', message: 'Saved.' });
     } catch (err) {
-      showError(err);
+      setTargetsStatus({ kind: 'error', message: errorMessage(err) });
     }
   };
 
@@ -135,135 +144,76 @@ function Settings() {
   };
 
   return (
-    <div class={styles.container}>
-      <h1 class={styles.heading}>Settings</h1>
+    <Page nav={<NavBar title="Settings" />}>
+      <form onSubmit={(event) => void handleSaveTargets(event)}>
+        <ListSection title="Food targets" padded>
+          <div class={styles.grid2}>
+            <Field label="Protein per day (g)">
+              <input type="number" inputmode="decimal" value={proteinTarget()} onInput={(event) => setProteinTarget(event.currentTarget.value)} />
+            </Field>
+            <Field label="Calories per day">
+              <input type="number" inputmode="decimal" value={calorieTarget()} onInput={(event) => setCalorieTarget(event.currentTarget.value)} />
+            </Field>
+          </div>
+          <Message kind={targetsStatus()?.kind ?? 'success'} text={targetsStatus()?.message} />
+          <Button type="submit">Save Targets</Button>
+        </ListSection>
+      </form>
 
-      <section class={styles.section}>
-        <h2 class={styles.sectionTitle}>Food Targets</h2>
-        <form class={styles.targetForm} onSubmit={(event) => void handleSaveTargets(event)}>
-          <label class={styles.targetField}>
-            <span>Daily protein target (g)</span>
-            <input
-              type="number"
-              inputmode="decimal"
-              class={styles.targetInput}
-              value={proteinTarget()}
-              onInput={(event) => setProteinTarget(event.currentTarget.value)}
-            />
-          </label>
-          <label class={styles.targetField}>
-            <span>Daily calorie target (cal)</span>
-            <input
-              type="number"
-              inputmode="decimal"
-              class={styles.targetInput}
-              value={calorieTarget()}
-              onInput={(event) => setCalorieTarget(event.currentTarget.value)}
-            />
-          </label>
-          <button type="submit" class={styles.actionButton}>
-            Save Targets
-          </button>
-        </form>
-      </section>
-
-      <section class={styles.section}>
-        <h2 class={styles.sectionTitle}>Medicines</h2>
+      <ListSection
+        title="Medicines"
+        footer="Hidden medicines stay off the Meds tab but keep their history. Deleting one keeps the doses already logged, under its name."
+      >
         <MedicinesSection version={medicinesVersion()} onChange={() => setConvertVersion((v) => v + 1)} />
-      </section>
+      </ListSection>
 
-      <ConvertMedsSection
-        version={convertVersion()}
-        onConverted={() => setMedicinesVersion((v) => v + 1)}
-        sectionClass={styles.section}
-        titleClass={styles.sectionTitle}
-      />
+      <ConvertMedsSection version={convertVersion()} onConverted={() => setMedicinesVersion((v) => v + 1)} />
 
-      <section class={styles.section}>
-        <h2 class={styles.sectionTitle}>Capture sources</h2>
+      <ListSection
+        title="Capture sources"
+        footer="Each source (the Siri Shortcut, Home Assistant) gets its own token to post text to the Inbox. Entries show the source's name. The README has the Shortcut's steps."
+      >
         <CaptureSourcesSection />
-      </section>
+      </ListSection>
 
-      <section class={styles.section}>
-        <h2 class={styles.sectionTitle}>Data</h2>
-        <p class={styles.noteCount}>
+      <ListSection
+        title="Data"
+        padded
+        footer="Export saves notes, food entries, food targets, medicines, doses and inbox entries in one file. Importing a file (from this app or the old Tag Notes app) merges it into your account: entries whose id matches an existing one replace it, others are added. Food targets in the file replace the current ones."
+      >
+        <p class={styles.text}>
           {noteCountText(noteCount())} and {foodCountText(foodCount())} stored
         </p>
-
-        <div class={styles.actions}>
-          <button type="button" class={styles.actionButton} onClick={() => void handleExport()}>
+        <div class={styles.grid2}>
+          <Button variant="tinted" onClick={() => void handleExport()}>
             Export All
-          </button>
-          <button
-            type="button"
-            class={styles.actionButton}
-            disabled={busy()}
-            onClick={() => fileInput?.click()}
-          >
-            {busy() ? 'Importing…' : 'Import'}
-          </button>
+          </Button>
+          <Button variant="tinted" disabled={busy()} onClick={() => fileInput?.click()}>
+            {busy() ? 'Importing…' : 'Import…'}
+          </Button>
         </div>
+        <input ref={fileInput} type="file" accept="application/json" class={styles.hiddenInput} onChange={(event) => void handleFileChange(event)} />
+        <Message kind={status()?.kind ?? 'success'} text={status()?.message} />
+      </ListSection>
 
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json"
-          class={styles.hiddenInput}
-          onChange={(event) => void handleFileChange(event)}
-        />
-
-        <Show when={status()}>
-          {(currentStatus) => (
-            <p
-              classList={{
-                [styles.success]: currentStatus().kind === 'success',
-                [styles.error]: currentStatus().kind === 'error',
-              }}
-            >
-              {currentStatus().message}
-            </p>
-          )}
-        </Show>
-
-        <p class={styles.hint}>
-          Export All saves notes, food entries, food targets, medicines,
-          doses and inbox entries in one file.
-          Importing a file (from this app or the old Tag Notes app) merges it
-          into your account: entries whose id matches an existing one replace
-          it, others are added. Food targets in the file replace the current
-          ones.
-        </p>
-      </section>
-
-      <section class={styles.section}>
-        <h2 class={styles.sectionTitle}>Glucose</h2>
+      <ListSection title="Glucose" padded>
         <GlucoseSection />
-      </section>
+      </ListSection>
 
-      <section class={styles.section}>
-        <h2 class={styles.sectionTitle}>Account</h2>
+      <ListSection title="Account" padded>
         <AccountSection />
-      </section>
+      </ListSection>
 
-      <section class={styles.section}>
-        <h2 class={styles.sectionTitle}>App</h2>
-        <div class={styles.actions}>
-          <button
-            type="button"
-            class={styles.actionButton}
-            disabled={refreshing()}
-            onClick={() => void handleRefreshAppCache()}
-          >
-            {refreshing() ? 'Refreshing…' : 'Refresh App'}
-          </button>
-        </div>
-        <p class={styles.hint}>
-          Clears the cached app files and reloads, so you get the latest
-          version. Your notes and food entries are on the server and are
-          never affected.
-        </p>
-      </section>
-    </div>
+      <ListSection
+        title="App"
+        padded
+        footer="Clears the cached app files and reloads, so you get the latest version. Your data is on the server and is never affected."
+      >
+        <Button variant="tinted" disabled={refreshing()} onClick={() => void handleRefreshAppCache()}>
+          {refreshing() ? 'Refreshing…' : 'Refresh App'}
+        </Button>
+      </ListSection>
+    </Page>
   );
 }
 

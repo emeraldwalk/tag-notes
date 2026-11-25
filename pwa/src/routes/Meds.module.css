@@ -1,59 +1,43 @@
-.container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-m);
 }
 
-.body {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.today {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.sectionTitle {
-  margin: 0;
-  font-size: 0.85rem;
+.otherButton {
+  min-height: 4rem;
+  padding: var(--space-m);
+  border: 1.5px dashed var(--color-accent-tint-pressed);
+  border-radius: var(--radius-card);
+  background: none;
+  color: var(--color-accent);
+  font-size: var(--font-callout);
   font-weight: 600;
-  color: #8e8e93;
 }
 
-.empty {
-  margin: 0;
-  color: #8e8e93;
-  font-size: 0.9rem;
+.otherButton:active {
+  background: var(--color-accent-tint);
 }
 
-.doseList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+.hint {
   margin: 0;
-  padding: 0;
-  list-style: none;
+  padding: 0 var(--space-l);
+  font-size: var(--font-footnote);
+  line-height: 1.35;
+  color: var(--color-secondary);
 }
 
 .doseRow {
   display: grid;
-  grid-template-columns: 5rem 1fr auto;
-  gap: 0.5rem;
+  grid-template-columns: 4.5rem 1fr auto;
+  gap: var(--space-s);
   align-items: baseline;
-  padding: 0.6rem 0.75rem;
-  background: #f8f8f8;
-  border-radius: 8px;
-  font-size: 0.95rem;
+  min-height: var(--hit);
+  padding: var(--space-m) var(--space-l);
 }
 
 .doseTime {
-  color: #8e8e93;
+  color: var(--color-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -62,56 +46,33 @@
 }
 
 .doseAmount {
-  color: #8e8e93;
-  font-size: 0.85rem;
+  color: var(--color-secondary);
+  font-size: var(--font-subhead);
 }
 
-.undoBar {
+/* Floats at the bottom of the screen, above the tab bar, while the list scrolls under it. */
+.toast {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.6rem 0.75rem;
-  background: #1c1c1e;
-  color: #fff;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  gap: var(--space-m);
+  margin-top: auto;
+  padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-l);
+  background: var(--color-toast);
+  color: var(--color-on-toast);
+  border-radius: var(--radius-card);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+  font-size: var(--font-subhead);
 }
 
 .undoButton {
-  padding: 0.3rem 0.8rem;
+  min-height: var(--hit);
+  padding: 0 var(--space-m);
   border: none;
-  border-radius: 6px;
   background: none;
-  color: #64d2ff;
-  font-size: 0.95rem;
+  color: var(--color-toast-action);
   font-weight: 700;
-}
-
-.error {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #ff3b30;
-}
-
-.buttons {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: 0.6rem;
-}
-
-.otherButton {
-  padding: 0.8rem 0.9rem;
-  border: 1px dashed #b0c8e8;
-  border-radius: 10px;
-  background: #fff;
-  color: #007aff;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.hint {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #8e8e93;
 }

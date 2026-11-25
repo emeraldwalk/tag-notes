@@ -1,5 +1,9 @@
 import { createMemo, createSignal, For, onMount, Show } from 'solid-js';
+import EmptyState from '../components/EmptyState';
+import ListSection from '../components/ListSection';
+import Message from '../components/Message';
 import NavBar from '../components/NavBar';
+import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
 import { foodStore } from '../lib/foods/store-instance';
 import { formatEatenAt } from '../lib/foods/time';
@@ -61,59 +65,41 @@ function FoodHistory() {
   });
 
   return (
-    <div class={styles.container}>
-      <NavBar title="History" backHref="/food" backLabel="Today" />
+    <Page nav={<NavBar title="Food History" back={{ href: '/food', label: 'Food' }} />}>
+      <Message kind="error" text={error()} />
 
-      <Show when={error()}>
-        {(message) => (
-          <p class={styles.error} role="alert">
-            {message()}
-          </p>
-        )}
-      </Show>
-
-      <Show
-        when={groups().length > 0}
-        fallback={<div class={styles.emptyState}>{loaded() && !error() ? 'No food logged yet' : ''}</div>}
-      >
-        <div class={styles.dayList}>
+      <Show when={loaded()}>
+        <Show when={groups().length > 0} fallback={<Show when={!error()}><EmptyState>No food logged yet.</EmptyState></Show>}>
           <For each={groups()}>
             {(group) => (
-              <div class={styles.day}>
-                <div class={styles.dayHeader}>
-                  <span class={styles.dayDate}>{formatDate(group.date)}</span>
-                  <span class={styles.dayTotals}>
-                    {Math.round(group.protein)}g protein · {Math.round(group.calories)} cal ·{' '}
-                    {Math.round(group.carbs)}g carbs
-                  </span>
-                </div>
-                <div class={styles.entryList}>
-                  <For each={group.entries}>
-                    {(entry) => (
-                      <div class={styles.entryRow}>
-                        <span class={styles.entryName}>
-                          <Show when={entry.eatenAt}>
-                            <span class={styles.entryTime}>{formatEatenAt(entry.eatenAt)} </span>
-                          </Show>
-                          {entry.name}
-                          <Show when={entry.quantity !== 1}>
-                            <span class={styles.entryQuantity}> x{entry.quantity}</span>
-                          </Show>
-                        </span>
-                        <span class={styles.entryMacros}>
-                          {Math.round(entry.protein * entry.quantity)}g /{' '}
-                          {Math.round(entry.calories * entry.quantity)} cal
-                        </span>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </div>
+              <ListSection
+                title={formatDate(group.date)}
+                footer={`${Math.round(group.protein)}g protein · ${Math.round(group.calories)} cal · ${Math.round(group.carbs)}g carbs`}
+              >
+                <For each={group.entries}>
+                  {(entry) => (
+                    <div class={styles.entryRow}>
+                      <span class={styles.entryName}>
+                        <Show when={entry.eatenAt}>
+                          <span class={styles.entryTime}>{formatEatenAt(entry.eatenAt)} </span>
+                        </Show>
+                        {entry.name}
+                        <Show when={entry.quantity !== 1}>
+                          <span class={styles.entryQuantity}> ×{entry.quantity}</span>
+                        </Show>
+                      </span>
+                      <span class={styles.entryMacros}>
+                        {Math.round(entry.protein * entry.quantity)}g · {Math.round(entry.calories * entry.quantity)} cal
+                      </span>
+                    </div>
+                  )}
+                </For>
+              </ListSection>
             )}
           </For>
-        </div>
+        </Show>
       </Show>
-    </div>
+    </Page>
   );
 }
 

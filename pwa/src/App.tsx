@@ -27,8 +27,10 @@ function App() {
       <Route path="/" component={() => <Navigate href="/notes" />} />
       <Route path="/inbox" component={() => <Inbox view="new" />} />
       <Route path="/inbox/filed" component={() => <Inbox view="filed" />} />
-      <Route path="/notes" component={NoteCreate} />
-      <Route path="/notes/history" component={NoteHistory} />
+      <Route path="/notes" component={NoteHistory} />
+      <Route path="/notes/new" component={NoteCreate} />
+      {/* The list used to live here; old bookmarks land on it. */}
+      <Route path="/notes/history" component={() => <Navigate href="/notes" />} />
       <Route path="/notes/:id" component={NoteEditor} />
       <Route path="/food" component={Food} />
       <Route path="/food/history" component={FoodHistory} />

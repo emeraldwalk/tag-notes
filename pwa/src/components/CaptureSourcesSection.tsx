@@ -3,6 +3,8 @@ import { ApiError, errorMessage } from '../lib/api';
 import { inboxStore } from '../lib/inbox/store-instance';
 import { formatEntryTime } from '../lib/inbox/time';
 import type { CreatedIngestToken, IngestToken } from '../lib/inbox/types';
+import Button from './Button';
+import Message from './Message';
 import styles from './CaptureSourcesSection.module.css';
 
 /**
@@ -68,33 +70,30 @@ function CaptureSourcesSection() {
     }
   };
 
+  // A fragment: each row is a direct child of the Settings card, so the card draws the hairlines between them.
   return (
-    <div class={styles.root}>
-      <Show when={tokens().length > 0}>
-        <ul class={styles.list}>
-          <For each={tokens()}>
-            {(token) => (
-              <li class={styles.item} classList={{ [styles.revoked]: Boolean(token.revokedAt) }}>
-                <div class={styles.details}>
-                  <span class={styles.name}>{token.name}</span>
-                  <span class={styles.meta}>
-                    {token.revokedAt
-                      ? `Revoked ${formatEntryTime(token.revokedAt)}`
-                      : token.lastUsedAt
-                        ? `Last used ${formatEntryTime(token.lastUsedAt)}`
-                        : `Added ${formatEntryTime(token.createdAt)}, not used yet`}
-                  </span>
-                </div>
-                <Show when={!token.revokedAt}>
-                  <button type="button" class={styles.revoke} disabled={busy()} onClick={() => void handleRevoke(token)}>
-                    Revoke
-                  </button>
-                </Show>
-              </li>
-            )}
-          </For>
-        </ul>
-      </Show>
+    <>
+      <For each={tokens()}>
+        {(token) => (
+          <div class={styles.item} classList={{ [styles.revoked]: Boolean(token.revokedAt) }}>
+            <div class={styles.details}>
+              <span class={styles.name}>{token.name}</span>
+              <span class={styles.meta}>
+                {token.revokedAt
+                  ? `Revoked ${formatEntryTime(token.revokedAt)}`
+                  : token.lastUsedAt
+                    ? `Last used ${formatEntryTime(token.lastUsedAt)}`
+                    : `Added ${formatEntryTime(token.createdAt)}, not used yet`}
+              </span>
+            </div>
+            <Show when={!token.revokedAt}>
+              <Button variant="plain" small class={styles.revoke} disabled={busy()} onClick={() => void handleRevoke(token)}>
+                Revoke
+              </Button>
+            </Show>
+          </div>
+        )}
+      </For>
 
       <Show when={created()}>
         {(fresh) => (
@@ -102,12 +101,12 @@ function CaptureSourcesSection() {
             <p class={styles.secretTitle}>Token for "{fresh().token.name}"</p>
             <code class={styles.secret}>{fresh().secret}</code>
             <div class={styles.secretActions}>
-              <button type="button" class={styles.button} onClick={() => void handleCopy(fresh().secret)}>
+              <Button variant="tinted" small onClick={() => void handleCopy(fresh().secret)}>
                 {copied() ? 'Copied' : 'Copy'}
-              </button>
-              <button type="button" class={styles.button} onClick={() => setCreated(undefined)}>
+              </Button>
+              <Button variant="gray" small onClick={() => setCreated(undefined)}>
                 Done
-              </button>
+              </Button>
             </div>
             <p class={styles.warning}>You won't see this again. Put it in the Shortcut's Authorization header as "Bearer" and the token.</p>
           </div>
@@ -116,30 +115,20 @@ function CaptureSourcesSection() {
 
       <form class={styles.addForm} onSubmit={(event) => void handleAdd(event)}>
         <input
-          class={styles.input}
-          placeholder="Name, e.g. Siri"
+          placeholder="New source, e.g. Siri"
+          aria-label="New capture source name"
           maxLength={40}
           value={name()}
           onInput={(event) => setName(event.currentTarget.value)}
         />
-        <button type="submit" class={styles.button} disabled={busy() || name().trim() === ''}>
+        <Button type="submit" variant="tinted" disabled={busy() || name().trim() === ''}>
           Add
-        </button>
+        </Button>
+        <div class={styles.message}>
+          <Message kind="error" text={error()} />
+        </div>
       </form>
-
-      <Show when={error()}>
-        {(message) => (
-          <p class={styles.error} role="alert">
-            {message()}
-          </p>
-        )}
-      </Show>
-
-      <p class={styles.hint}>
-        Each source (the Siri Shortcut, Home Assistant) gets its own token to post text to the Inbox. Entries show the
-        source's name. The README has the Shortcut's steps.
-      </p>
-    </div>
+    </>
   );
 }
 

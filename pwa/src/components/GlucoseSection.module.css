@@ -1,19 +1,19 @@
 .root {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  gap: var(--space-s);
+  font-size: var(--font-subhead);
 }
 
 .list {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.4rem 0.75rem;
+  gap: var(--space-s) var(--space-m);
   margin: 0;
 }
 
 .list dt {
-  font-weight: 600;
+  color: var(--color-secondary);
 }
 
 .list dd {
@@ -21,10 +21,5 @@
 }
 
 .dim {
-  color: #8e8e93;
-}
-
-.error {
-  margin: 0;
-  color: #ff3b30;
+  color: var(--color-secondary);
 }

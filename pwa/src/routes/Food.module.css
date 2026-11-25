@@ -1,237 +1,164 @@
-.container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.body {
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  gap: 1rem;
-}
-
 .stats {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-s);
 }
 
 .remainingRow {
-  display: flex;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-m);
 }
 
 .remainingCard {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem 0.5rem;
-  background: #e5f1ff;
-  border-radius: 12px;
+  padding: var(--space-l) var(--space-s);
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  color: var(--color-accent);
+}
+
+.over {
+  color: var(--color-danger);
 }
 
 .remainingValue {
   font-size: 2rem;
   font-weight: 700;
-  color: #007aff;
+  font-variant-numeric: tabular-nums;
 }
 
 .remainingLabel {
-  font-size: 0.8rem;
-  color: #8e8e93;
+  font-size: var(--font-footnote);
+  color: var(--color-secondary);
 }
 
 .detailRow {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
-  color: #8e8e93;
+  gap: var(--space-s);
+  padding: 0 var(--space-xs);
+  font-size: var(--font-footnote);
+  color: var(--color-secondary);
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #f8f8f8;
-  border-radius: 8px;
+.formSection {
+  scroll-margin-top: var(--space-l);
 }
 
-.nameInput {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.5rem 0.8rem;
-  font-size: 1rem;
-  border: 1px solid #d1d1d6;
-  border-radius: 8px;
-  background: #fff;
+.grid3,
+.grid2 {
+  display: grid;
+  gap: var(--space-s);
 }
 
-.macroRow {
-  display: flex;
-  gap: 0.5rem;
+.grid3 {
+  grid-template-columns: repeat(3, 1fr);
 }
 
-.macroInput {
-  flex: 1;
-  width: 0;
-  box-sizing: border-box;
-  padding: 0.5rem 0.6rem;
-  font-size: 0.95rem;
-  border: 1px solid #d1d1d6;
-  border-radius: 8px;
-  background: #fff;
+.grid2 {
+  grid-template-columns: 1fr 1fr;
 }
 
-.quantityRow {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.quantityInput {
-  width: 4.5rem;
-  box-sizing: border-box;
-  padding: 0.5rem 0.6rem;
-  font-size: 0.95rem;
-  border: 1px solid #d1d1d6;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.timeInput {
-  width: 7rem;
-  box-sizing: border-box;
-  padding: 0.5rem 0.6rem;
-  font-size: 0.95rem;
-  border: 1px solid #d1d1d6;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.error {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #ff3b30;
-}
-
-.addButton {
-  flex: 1;
-  padding: 0.6rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  background: #007aff;
-  border: none;
-  border-radius: 8px;
-}
-
-.cancelButton {
-  padding: 0.6rem 1rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #007aff;
-  background: #fff;
-  border: 1px solid #d1d1d6;
-  border-radius: 8px;
-}
-
-.sectionTitle {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #8e8e93;
-  margin-bottom: 0.4rem;
+.formActions {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: var(--space-s);
 }
 
 .recentSection {
   display: flex;
   flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  padding: 0 var(--space-l);
+  font-size: var(--font-footnote);
+  font-weight: 400;
+  color: var(--color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .recentList {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-s);
 }
 
 .recentChip {
-  padding: 0.3rem 0.8rem;
-  background: #e5f1ff;
-  color: #007aff;
+  min-height: 32px;
+  padding: 0 var(--space-m);
   border: none;
   border-radius: 999px;
-  font-size: 0.85rem;
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: var(--font-subhead);
 }
 
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.recentChip:active {
+  background: var(--color-fill);
 }
 
 .row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #f8f8f8;
-  border-radius: 8px;
 }
 
 .rowEditing {
-  background: #e5f1ff;
+  background: var(--color-accent-tint);
 }
 
 .rowMain {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.2rem;
-  padding: 0;
+  min-width: 0;
+  padding: var(--space-m) 0 var(--space-m) var(--space-l);
   background: none;
   border: none;
   text-align: left;
 }
 
 .rowName {
-  font-size: 1rem;
   font-weight: 600;
 }
 
 .rowTime {
   font-weight: 400;
-  color: #8e8e93;
+  color: var(--color-secondary);
   font-variant-numeric: tabular-nums;
 }
 
 .rowQuantity {
   font-weight: 400;
-  color: #8e8e93;
+  color: var(--color-secondary);
 }
 
 .rowMacros {
-  font-size: 0.8rem;
-  color: #8e8e93;
+  font-size: var(--font-footnote);
+  color: var(--color-secondary);
 }
 
 .removeButton {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: var(--hit);
+  height: var(--hit);
+  margin-right: var(--space-xs);
   border: none;
-  border-radius: 50%;
-  background: #fff;
-  color: #ff3b30;
-  font-size: 1.1rem;
-  line-height: 1;
+  background: none;
+  color: var(--color-danger);
 }
 
-.emptyState {
-  text-align: center;
-  color: #8e8e93;
-  padding: 2rem 1rem;
+.removeButton svg {
+  width: 20px;
+  height: 20px;
 }

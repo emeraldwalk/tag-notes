@@ -1,0 +1,9 @@
+.message {
+  margin: 0;
+  font-size: var(--font-subhead);
+  color: var(--color-success);
+}
+
+.error {
+  color: var(--color-danger);
+}

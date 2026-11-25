@@ -1,68 +1,45 @@
-import { A, useNavigate, useParams } from '@solidjs/router';
-import { createSignal, onMount, Show } from 'solid-js';
+import { useParams, useSearchParams } from '@solidjs/router';
+import { createResource, Show } from 'solid-js';
+import EmptyState from '../components/EmptyState';
 import NavBar from '../components/NavBar';
-import NoteTextEditor from '../components/NoteTextEditor';
+import NoteForm from '../components/NoteForm';
+import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
 import { noteStore } from '../lib/notes/store-instance';
-import type { Note } from '../lib/notes/types';
-import styles from './NoteEditor.module.css';
 
+/** One note. Opened from the Notes list, or from the Inbox (`?from=inbox`), which back then returns to. */
 function NoteEditor() {
   const params = useParams();
-  const navigate = useNavigate();
+  const [search] = useSearchParams();
   const id = () => params.id ?? '';
+  const back = () => (search.from === 'inbox' ? { href: '/inbox', label: 'Inbox' } : { href: '/notes', label: 'Notes' });
 
-  const [note, setNote] = createSignal<Note | undefined>();
-  const [loading, setLoading] = createSignal(true);
-  const [error, setError] = createSignal<string | undefined>();
-
-  onMount(async () => {
-    try {
-      setNote(await noteStore.get(id()));
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  });
-
-  const handleSave = async (rawText: string) => {
-    await noteStore.update(id(), rawText);
-    navigate('/notes/history');
-  };
-
-  const handleDelete = async () => {
-    if (!window.confirm('Delete this note?')) return;
-    await noteStore.remove(id());
-    navigate('/notes/history');
-  };
+  const [note] = createResource(id, (noteId) => noteStore.get(noteId));
 
   return (
-    <div class={styles.page}>
-      <NavBar title="Edit Note" backHref="/notes/history" backLabel="All Notes" />
-      <Show when={!loading()} fallback={<div />}>
-        <Show
-          when={note()}
-          fallback={
-            <div class={styles.notFound}>
-              <p>{error() ?? 'Note not found'}</p>
-              <A href="/notes/history" class={styles.backLink}>
-                Back to list
-              </A>
-            </div>
-          }
-        >
-          {(currentNote) => (
-            <NoteTextEditor
-              initialText={currentNote().rawText}
-              onSave={handleSave}
-              onDelete={handleDelete}
-              saveLabel="Save Changes"
-            />
-          )}
-        </Show>
-      </Show>
-    </div>
+    <Show
+      when={note.state === 'ready' && note()}
+      fallback={
+        <Page nav={<NavBar title="Note" back={back()} />}>
+          <Show when={!note.loading}>
+            <EmptyState>{note.error ? errorMessage(note.error) : 'This note no longer exists.'}</EmptyState>
+          </Show>
+        </Page>
+      }
+    >
+      {(current) => (
+        <NoteForm
+          title="Note"
+          initialText={current().rawText}
+          back={back()}
+          doneHref={back().href}
+          onSave={async (rawText) => {
+            await noteStore.update(id(), rawText);
+          }}
+          onDelete={() => noteStore.remove(id())}
+        />
+      )}
+    </Show>
   );
 }
 

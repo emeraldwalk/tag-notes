@@ -1,5 +1,7 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal } from 'solid-js';
 import { errorMessage } from '../lib/api';
+import Button from './Button';
+import Message from './Message';
 import styles from './CaptureBox.module.css';
 
 export interface CaptureBoxProps {
@@ -34,20 +36,17 @@ function CaptureBox(props: CaptureBoxProps) {
       <textarea
         class={styles.textarea}
         placeholder="Say or type anything"
+        aria-label="New inbox entry"
         rows={2}
         value={text()}
         onInput={(event) => setText(event.currentTarget.value)}
       />
-      <button type="submit" class={styles.save} disabled={saving() || text().trim() === ''}>
+      <Button type="submit" disabled={saving() || text().trim() === ''}>
         {saving() ? 'Saving…' : 'Save'}
-      </button>
-      <Show when={error()}>
-        {(message) => (
-          <p class={styles.error} role="alert">
-            {message()}
-          </p>
-        )}
-      </Show>
+      </Button>
+      <div class={styles.message}>
+        <Message kind="error" text={error()} />
+      </div>
     </form>
   );
 }

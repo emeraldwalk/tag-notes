@@ -2,6 +2,9 @@ import { createEffect, createSignal, For, on, Show } from 'solid-js';
 import { errorMessage } from '../lib/api';
 import { medsStore } from '../lib/meds/store-instance';
 import type { Medicine } from '../lib/meds/types';
+import Button from './Button';
+import Field from './Field';
+import Message from './Message';
 import styles from './MedicinesSection.module.css';
 
 export interface MedicinesSectionProps {
@@ -93,125 +96,108 @@ function MedicinesSection(props: MedicinesSectionProps) {
     );
   };
 
+  // A fragment: each row is a direct child of the Settings card, so the card draws the hairlines between them.
   return (
-    <div class={styles.root}>
-      <Show when={medicines().length > 0} fallback={<p class={styles.hint}>No medicines yet.</p>}>
-        <ul class={styles.list}>
-          <For each={medicines()}>
-            {(medicine, index) => (
-              <li class={styles.item}>
-                <Show
-                  when={editingId() === medicine.id}
-                  fallback={
-                    <div class={styles.row}>
-                      <span class={styles.name} classList={{ [styles.inactive]: !medicine.active }}>
-                        {medicine.name}
-                        <Show when={medicine.defaultDose}>
-                          <span class={styles.dose}> · {medicine.defaultDose}</span>
-                        </Show>
-                        <Show when={!medicine.active}>
-                          <span class={styles.dose}> (inactive)</span>
-                        </Show>
-                      </span>
-                      <button
-                        type="button"
-                        class={styles.iconButton}
-                        aria-label={`Move ${medicine.name} up`}
-                        disabled={busy() || index() === 0}
-                        onClick={() => move(index(), -1)}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        class={styles.iconButton}
-                        aria-label={`Move ${medicine.name} down`}
-                        disabled={busy() || index() === medicines().length - 1}
-                        onClick={() => move(index(), 1)}
-                      >
-                        ↓
-                      </button>
-                      <button type="button" class={styles.textButton} disabled={busy()} onClick={() => startEdit(medicine)}>
-                        Edit
-                      </button>
-                    </div>
-                  }
-                >
-                  <form class={styles.form} onSubmit={(event) => void handleSave(event, medicine.id)}>
-                    <input
-                      type="text"
-                      class={styles.input}
-                      aria-label="Name"
-                      value={editName()}
-                      onInput={(event) => setEditName(event.currentTarget.value)}
-                    />
-                    <input
-                      type="text"
-                      class={styles.input}
-                      aria-label="Default dose"
-                      placeholder="Default dose (e.g. 500 mg)"
-                      value={editDose()}
-                      onInput={(event) => setEditDose(event.currentTarget.value)}
-                    />
-                    <label class={styles.check}>
-                      <input
-                        type="checkbox"
-                        checked={editActive()}
-                        onChange={(event) => setEditActive(event.currentTarget.checked)}
-                      />
-                      <span>Show on the Meds tab</span>
-                    </label>
-                    <div class={styles.formActions}>
-                      <button type="submit" class={styles.primary} disabled={busy() || !editName().trim()}>
-                        Save
-                      </button>
-                      <button type="button" class={styles.secondary} onClick={() => setEditingId(undefined)}>
-                        Cancel
-                      </button>
-                      <button type="button" class={styles.danger} disabled={busy()} onClick={() => void handleDelete(medicine)}>
-                        Delete
-                      </button>
-                    </div>
-                  </form>
-                </Show>
-              </li>
-            )}
-          </For>
-        </ul>
+    <>
+      <Show when={medicines().length === 0}>
+        <p class={`${styles.row} ${styles.empty}`}>No medicines yet.</p>
       </Show>
-
-      <form class={styles.addForm} onSubmit={(event) => void handleAdd(event)}>
-        <input
-          type="text"
-          class={styles.input}
-          placeholder="Medicine name"
-          value={newName()}
-          onInput={(event) => setNewName(event.currentTarget.value)}
-        />
-        <input
-          type="text"
-          class={styles.input}
-          placeholder="Default dose (optional)"
-          value={newDose()}
-          onInput={(event) => setNewDose(event.currentTarget.value)}
-        />
-        <button type="submit" class={styles.primary} disabled={busy() || !newName().trim()}>
-          Add Medicine
-        </button>
-      </form>
-
-      <Show when={error()}>
-        {(message) => (
-          <p class={styles.error} role="alert">
-            {message()}
-          </p>
+      <For each={medicines()}>
+        {(medicine, index) => (
+          <Show
+            when={editingId() === medicine.id}
+            fallback={
+              <div class={styles.row}>
+                <span class={styles.name} classList={{ [styles.inactive]: !medicine.active }}>
+                  {medicine.name}
+                  <Show when={medicine.defaultDose}>
+                    <span class={styles.dose}> · {medicine.defaultDose}</span>
+                  </Show>
+                  <Show when={!medicine.active}>
+                    <span class={styles.dose}> (hidden)</span>
+                  </Show>
+                </span>
+                <span class={styles.rowActions}>
+                  <Button
+                    variant="gray"
+                    small
+                    aria-label={`Move ${medicine.name} up`}
+                    disabled={busy() || index() === 0}
+                    onClick={() => move(index(), -1)}
+                  >
+                    ↑
+                  </Button>
+                  <Button
+                    variant="gray"
+                    small
+                    aria-label={`Move ${medicine.name} down`}
+                    disabled={busy() || index() === medicines().length - 1}
+                    onClick={() => move(index(), 1)}
+                  >
+                    ↓
+                  </Button>
+                  <Button variant="gray" small disabled={busy()} onClick={() => startEdit(medicine)}>
+                    Edit
+                  </Button>
+                </span>
+              </div>
+            }
+          >
+            <form class={styles.form} onSubmit={(event) => void handleSave(event, medicine.id)}>
+              <Field label="Name">
+                <input type="text" value={editName()} onInput={(event) => setEditName(event.currentTarget.value)} />
+              </Field>
+              <Field label="Default dose">
+                <input
+                  type="text"
+                  placeholder="e.g. 500 mg"
+                  value={editDose()}
+                  onInput={(event) => setEditDose(event.currentTarget.value)}
+                />
+              </Field>
+              <label class={styles.check}>
+                <input type="checkbox" checked={editActive()} onChange={(event) => setEditActive(event.currentTarget.checked)} />
+                <span>Show on the Meds tab</span>
+              </label>
+              <div class={styles.formActions}>
+                <Button variant="destructive" disabled={busy()} onClick={() => void handleDelete(medicine)}>
+                  Delete
+                </Button>
+                <Button variant="gray" onClick={() => setEditingId(undefined)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={busy() || !editName().trim()}>
+                  Save
+                </Button>
+              </div>
+            </form>
+          </Show>
         )}
-      </Show>
-      <p class={styles.hint}>
-        Inactive medicines are hidden from the Meds tab but kept for history. Deleting one keeps the doses already
-        logged, under its name.
-      </p>
-    </div>
+      </For>
+
+      <form class={styles.form} onSubmit={(event) => void handleAdd(event)}>
+        <div class={styles.addFields}>
+          <input
+            type="text"
+            placeholder="New medicine"
+            aria-label="New medicine name"
+            value={newName()}
+            onInput={(event) => setNewName(event.currentTarget.value)}
+          />
+          <input
+            type="text"
+            placeholder="Default dose"
+            aria-label="Default dose (optional)"
+            value={newDose()}
+            onInput={(event) => setNewDose(event.currentTarget.value)}
+          />
+        </div>
+        <Button type="submit" variant="tinted" disabled={busy() || !newName().trim()}>
+          Add Medicine
+        </Button>
+        <Message kind="error" text={error()} />
+      </form>
+    </>
   );
 }
 

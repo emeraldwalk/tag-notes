@@ -23,8 +23,8 @@ export default defineConfig({
         description: 'Notes, food and the health data behind blood sugar highs.',
         scope: base,
         start_url: base,
-        theme_color: '#2f6f4f',
-        background_color: '#fefefe',
+        theme_color: '#f9f9f9',
+        background_color: '#f2f2f7',
         display: 'standalone',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },

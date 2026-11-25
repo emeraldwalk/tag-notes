@@ -1,0 +1,59 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-s);
+  margin: 0;
+  padding: 0 var(--space-l);
+  font-size: var(--font-footnote);
+  font-weight: 400;
+  color: var(--color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+}
+
+/* Inset hairline between rows, starting at the rows' text like iOS. */
+.card:not(.padded) > * + * {
+  position: relative;
+}
+
+.card:not(.padded) > * + *::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--space-l);
+  right: 0;
+  border-top: var(--hairline) solid var(--color-separator);
+}
+
+.padded {
+  gap: var(--space-m);
+  padding: var(--space-m) var(--space-l);
+}
+
+.footer {
+  padding: 0 var(--space-l);
+  font-size: var(--font-footnote);
+  line-height: 1.35;
+  color: var(--color-secondary);
+}
+
+.footer p {
+  margin: 0;
+}

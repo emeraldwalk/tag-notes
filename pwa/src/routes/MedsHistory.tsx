@@ -1,6 +1,11 @@
 import { createMemo, createSignal, For, onMount, Show } from 'solid-js';
 import DoseSheet, { type DoseSheetValues } from '../components/DoseSheet';
+import Button from '../components/Button';
+import EmptyState from '../components/EmptyState';
+import ListSection from '../components/ListSection';
+import Message from '../components/Message';
 import NavBar from '../components/NavBar';
+import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
 import { medsStore } from '../lib/meds/store-instance';
 import { formatDay, formatTime, historyRange, MAX_RANGE_DAYS, takenDay } from '../lib/meds/time';
@@ -60,48 +65,42 @@ function MedsHistory() {
   };
 
   return (
-    <div class={styles.container}>
-      <NavBar title="History" backHref="/meds" backLabel="Meds" />
+    <Page nav={<NavBar title="Meds History" back={{ href: '/meds', label: 'Meds' }} />}>
+      <Message kind="error" text={error()} />
 
-      <Show when={error()}>
-        {(message) => (
-          <p class={styles.error} role="alert">
-            {message()}
-          </p>
-        )}
+      <Show when={pages() > 0 && doses().length === 0}>
+        <EmptyState>No doses in the last {pages() * MAX_RANGE_DAYS} days.</EmptyState>
       </Show>
 
-      <div class={styles.dayList}>
-        <Show when={pages() > 0 && doses().length === 0}>
-          <p class={styles.empty}>No doses in the last {pages() * MAX_RANGE_DAYS} days</p>
-        </Show>
-        <For each={days()}>
-          {(group) => (
-            <section class={styles.day}>
-              <h2 class={styles.dayDate}>{formatDay(group.day)}</h2>
-              <For each={group.doses}>
-                {(dose) => (
-                  <button type="button" class={styles.doseRow} onClick={() => setEditing(dose)}>
-                    <span class={styles.doseTime}>{formatTime(dose.takenAt)}</span>
-                    <span class={styles.doseMain}>
-                      <span class={styles.doseName}>{dose.medicineName}</span>
-                      <Show when={dose.note}>
-                        <span class={styles.doseNote}>{dose.note}</span>
-                      </Show>
-                    </span>
-                    <span class={styles.doseAmount}>{dose.dose ?? ''}</span>
-                  </button>
-                )}
-              </For>
-            </section>
-          )}
-        </For>
-        <Show when={pages() > 0}>
-          <button type="button" class={styles.moreButton} disabled={loading()} onClick={() => void loadMore()}>
-            {loading() ? 'Loading…' : 'Load earlier'}
-          </button>
-        </Show>
-      </div>
+      <For each={days()}>
+        {(group) => (
+          <ListSection title={formatDay(group.day)}>
+            <For each={group.doses}>
+              {(dose) => (
+                <button type="button" class={styles.doseRow} onClick={() => setEditing(dose)}>
+                  <span class={styles.doseTime}>{formatTime(dose.takenAt)}</span>
+                  <span class={styles.doseMain}>
+                    <span class={styles.doseName}>{dose.medicineName}</span>
+                    <Show when={dose.note}>
+                      <span class={styles.doseNote}>{dose.note}</span>
+                    </Show>
+                  </span>
+                  <span class={styles.doseAmount}>{dose.dose ?? ''}</span>
+                  <span class={styles.chevron} aria-hidden="true">
+                    ›
+                  </span>
+                </button>
+              )}
+            </For>
+          </ListSection>
+        )}
+      </For>
+
+      <Show when={pages() > 0}>
+        <Button variant="plain" disabled={loading()} onClick={() => void loadMore()}>
+          {loading() ? 'Loading…' : 'Load Earlier'}
+        </Button>
+      </Show>
 
       <Show when={editing()}>
         {(dose) => (
@@ -114,7 +113,7 @@ function MedsHistory() {
           />
         )}
       </Show>
-    </div>
+    </Page>
   );
 }
 

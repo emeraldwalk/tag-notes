@@ -1,12 +1,17 @@
 import { createSignal, For, onMount, Show } from 'solid-js';
+import Button from '../components/Button';
 import CaptureBox from '../components/CaptureBox';
+import EmptyState from '../components/EmptyState';
+import ListSection from '../components/ListSection';
+import Message from '../components/Message';
 import NavBar from '../components/NavBar';
+import NavButton from '../components/NavButton';
+import Page from '../components/Page';
 import RawEntryCard from '../components/RawEntryCard';
 import { errorMessage } from '../lib/api';
 import { refreshInboxCount } from '../lib/inbox/count';
 import { inboxStore } from '../lib/inbox/store-instance';
 import type { RawEntry, RawEntryFilter, RawEntryStatus } from '../lib/inbox/types';
-import styles from './Inbox.module.css';
 
 const PAGE = 50;
 
@@ -99,35 +104,32 @@ function Inbox(props: InboxProps) {
   };
 
   return (
-    <div class={styles.container}>
-      <Show
-        when={isNewView()}
-        fallback={<NavBar title="Done and dismissed" backHref="/inbox" backLabel="Inbox" />}
-      >
-        <NavBar title="Inbox" action={{ label: 'Filed', href: '/inbox/filed' }} />
+    <Page
+      nav={
+        <Show
+          when={isNewView()}
+          fallback={<NavBar title="Filed" back={{ href: '/inbox', label: 'Inbox' }} />}
+        >
+          <NavBar title="Inbox" trailing={<NavButton href="/inbox/filed">Filed</NavButton>} />
+        </Show>
+      }
+    >
+      <Show when={isNewView()}>
+        <CaptureBox onSave={handleSave} />
       </Show>
-      <div class={styles.body}>
-        <Show when={isNewView()}>
-          <CaptureBox onSave={handleSave} />
-        </Show>
 
-        <Show when={error()}>
-          {(message) => (
-            <p class={styles.error} role="alert">
-              {message()}
-            </p>
-          )}
-        </Show>
+      <Message kind="error" text={error()} />
 
+      <Show when={loaded()}>
         <Show
           when={entries().length > 0}
           fallback={
-            <p class={styles.empty}>
-              {loaded() ? (isNewView() ? 'Nothing new. Say "Hey Siri, Tracker" or type above.' : 'Nothing filed yet.') : ''}
-            </p>
+            <EmptyState>
+              {isNewView() ? 'Nothing new. Say "Hey Siri, Tracker" or type above.' : 'Done and dismissed entries show up here.'}
+            </EmptyState>
           }
         >
-          <ul class={styles.list}>
+          <ListSection title={isNewView() ? 'New' : 'Done and dismissed'}>
             <For each={entries()}>
               {(entry) => (
                 <RawEntryCard
@@ -139,16 +141,16 @@ function Inbox(props: InboxProps) {
                 />
               )}
             </For>
-          </ul>
+          </ListSection>
         </Show>
+      </Show>
 
-        <Show when={more()}>
-          <button type="button" class={styles.more} onClick={() => void loadEarlier()}>
-            Load earlier
-          </button>
-        </Show>
-      </div>
-    </div>
+      <Show when={more()}>
+        <Button variant="plain" onClick={() => void loadEarlier()}>
+          Load Earlier
+        </Button>
+      </Show>
+    </Page>
   );
 }
 
