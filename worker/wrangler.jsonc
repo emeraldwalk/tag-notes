@@ -16,7 +16,7 @@
       "binding": "DB",
       "database_name": "tracker",
       // Placeholder: the owner replaces it with the id `npx wrangler d1 create tracker` prints, then commits.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "a45286ac-aa49-43bd-8aba-ed34904259b3",
       "migrations_dir": "migrations"
     }
   ],
