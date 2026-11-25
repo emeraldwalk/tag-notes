@@ -61,6 +61,30 @@ One-time setup (owner):
    production branch `main`.
 5. Push `main`.
 
+### Glucose (plan 14)
+
+The Worker polls LibreLinkUp, the unofficial follower API behind Abbott's LibreLinkUp app, every 5 minutes. It signs
+in as a **follower account**, caches the token (about 180 days), and stores the latest reading plus the last ~12 hours
+of 15-minute points in `glucose_readings`. The home page shows the last reading and how the last run went. After a
+rate limit it pauses (`Retry-After`, else 30 minutes); after a refused sign-in it pauses an hour, so a wrong password
+can't lock the account.
+
+Setup (owner):
+
+1. **Follower account:** a separate LibreView account with a different email. In the Libre 3 app: Share → Connected
+   apps → LibreLinkUp → invite that email. Accept in the LibreLinkUp app once, and accept its terms there.
+2. **`OWNER_USER_ID`** in `worker/wrangler.jsonc`: your user id from the home page. Readings are stored for it.
+   `LLU_REGION` is `us`; a wrong region is followed automatically.
+3. From `worker/`: `npx wrangler secret put` each of `LLU_EMAIL`, `LLU_PASSWORD` (the follower account) and
+   `HA_INGEST_TOKEN` (`openssl rand -base64 32`; Home Assistant's token for `POST /api/ingest/glucose`, a different
+   value from family-mail's secret of the same name).
+4. Push. Within 10 minutes the home page should show a reading matching the Libre app.
+
+If LibreView refuses the Worker (the page shows `http_403` or similar), switch to Home Assistant polling:
+[`docs/home-assistant.md`](docs/home-assistant.md).
+
+The cron uses one of the account's 5 free-plan cron triggers.
+
 Sessions last 30 days without use and 30 days at most; signing in again is silent while the IdP session lasts.
 
 To read CPU time per request (the free plan allows 10 ms), run in your own terminal while making requests:

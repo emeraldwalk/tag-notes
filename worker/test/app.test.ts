@@ -1,3 +1,4 @@
+import { env } from 'cloudflare:test';
 import type { Hono } from 'hono';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type AppEnv, createApp } from '../src/app';
@@ -47,7 +48,7 @@ async function signIn(jar: Jar): Promise<void> {
 beforeEach(async () => {
   idp = await new FakeIdp().start();
   const auth = createTrackerAuth({ issuer: idp.issuer, clientId: idp.clientId, clientSecret: idp.clientSecret, cookieSecret: SECRET });
-  app = createApp({ auth, commit: 'abc1234' });
+  app = createApp({ auth, commit: 'abc1234', db: env.DB, haToken: 'test-ha-token', ownerUserId: 'sub-brian' });
 });
 
 afterEach(() => {
@@ -96,6 +97,7 @@ describe('signed in', () => {
     expect(html).toContain('sub-brian');
     expect(html).toContain('abc1234');
     expect(html).toContain('/auth/logout');
+    expect(html).toContain('No readings yet');
   });
 
   it('answers unknown API paths with a JSON 404', async () => {
@@ -121,4 +123,54 @@ describe('signed in', () => {
 it('404s other paths', async () => {
   const res = await get(new Jar(), '/elsewhere');
   expect(res.status).toBe(404);
+});
+
+describe('glucose reads', () => {
+  beforeEach(async () => {
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM glucose_readings'),
+      env.DB.prepare(
+        `INSERT INTO glucose_readings (user_id, ts, mg_dl, trend, source, kind, created_at) VALUES
+         ('sub-brian', '2026-11-24T10:00:00Z', 110, NULL, 'llu', 'historic', '2026-11-24T12:00:00Z'),
+         ('sub-brian', '2026-11-24T11:00:00Z', 140, 4, 'llu', 'current', '2026-11-24T12:00:00Z'),
+         ('sub-someone', '2026-11-24T10:30:00Z', 99, NULL, 'llu', 'current', '2026-11-24T12:00:00Z')`,
+      ),
+    ]);
+  });
+
+  it('needs a session', async () => {
+    expect((await get(new Jar(), '/api/glucose?from=2026-11-24T00:00:00Z&to=2026-11-25T00:00:00Z')).status).toBe(401);
+    expect((await get(new Jar(), '/api/glucose/status')).status).toBe(401);
+  });
+
+  it('returns only my readings in the range, oldest first', async () => {
+    const jar = new Jar();
+    await signIn(jar);
+    const res = await get(jar, '/api/glucose?from=2026-11-24T00:00:00Z&to=2026-11-24T10:59:59-01:00');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      readings: [
+        { ts: '2026-11-24T10:00:00Z', mgDl: 110, trend: null, source: 'llu', kind: 'historic' },
+        { ts: '2026-11-24T11:00:00Z', mgDl: 140, trend: 4, source: 'llu', kind: 'current' },
+      ],
+    });
+  });
+
+  it('refuses bad or too-long ranges', async () => {
+    const jar = new Jar();
+    await signIn(jar);
+    for (const q of ['', '?from=yesterday&to=today', '?from=2026-11-24T00:00:00&to=2026-11-25T00:00:00', '?from=2026-12-01T00:00:00Z&to=2026-11-01T00:00:00Z', '?from=2026-10-01T00:00:00Z&to=2026-11-24T00:00:00Z']) {
+      expect((await get(jar, `/api/glucose${q}`)).status, q).toBe(400);
+    }
+  });
+
+  it('reports the last reading and the poller status', async () => {
+    const jar = new Jar();
+    await signIn(jar);
+    const body = (await (await get(jar, '/api/glucose/status')).json()) as Record<string, unknown>;
+    expect(body.lastReading).toEqual({ ts: '2026-11-24T11:00:00Z', mgDl: 140, trend: 4 });
+    expect(Object.keys(body.llu as object).sort()).toEqual(['backoffUntil', 'lastError', 'lastOkAt', 'lastRunAt']);
+    const html = await (await get(jar, '/')).text();
+    expect(html).toContain('140 mg/dL ↗');
+  });
 });

@@ -1,13 +1,21 @@
 # 14 — Glucose ingest
 
-- [ ] Migration `0001_glucose.sql`
-- [ ] LibreLinkUp client (login, region redirect, cached token, connections, graph) and timestamp parsing
-- [ ] Cron every 5 minutes storing readings; poll status recorded
-- [ ] `POST /api/ingest/glucose` (bearer token) — the fallback path and any other push source
-- [ ] `GET /api/glucose` and `GET /api/glucose/status` (signed in); placeholder page shows the last reading
-- [ ] Tests
-- [ ] README: secrets, the Libre follower setup, the fallback
+- [x] Migration `0001_glucose.sql`
+- [x] LibreLinkUp client (login, region redirect, cached token, connections, graph) and timestamp parsing
+- [x] Cron every 5 minutes storing readings; poll status recorded
+- [x] `POST /api/ingest/glucose` (bearer token) — the fallback path and any other push source
+- [x] `GET /api/glucose` and `GET /api/glucose/status` (signed in); placeholder page shows the last reading
+- [x] Tests
+- [x] README: secrets, the Libre follower setup, the fallback
 - [ ] Owner: follower account, secrets, `OWNER_USER_ID`, push, live checks — **first check decides LLU vs fallback**
+
+## Implementation notes (2026-11-24)
+
+- A refused sign-in (`login_failed`) also pauses polling for an hour and drops the cached token, so a wrong password
+  doesn't retry every 5 minutes and lock the follower account.
+- `OWNER_USER_ID` empty makes the cron record `no_owner_user_id` and the ingest route answer `503`, rather than
+  storing readings under no one.
+- The HA fallback's config is already written, in `docs/home-assistant.md`, so switching needs no code.
 
 ## Goal
 

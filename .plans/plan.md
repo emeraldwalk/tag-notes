@@ -54,7 +54,6 @@ Implement in this order, on `main`.
 
 | # | Plan | Depends on | Needs from the owner |
 | - | ---- | ---------- | -------------------- |
-| 14 | [Glucose ingest](pending/14-glucose-ingest.md) | 7 | LibreLinkUp follower account, secrets, `OWNER_USER_ID`; first live run decides LibreLinkUp vs the HA fallback |
 | 6 | [Full export / import](pending/06-full-export-import.md) | — | Push (GitHub Pages), export a file from the installed app |
 | 8 | [Server storage](pending/08-server-storage.md) | 6, 7 | Import the file; later retire GitHub Pages and rename the repo |
 | 16 | [Medicine log](pending/16-medicine-log.md) | 8 | Set up medicines, convert `meds` notes |
@@ -112,7 +111,8 @@ model id, API key), never hard-coded, and each proposal records the model that p
 | 3 | [app-shell-and-routing.md](implemented/03-app-shell-and-routing.md) | ✅ Done |
 | 4 | [home-note-entry.md](implemented/04-home-note-entry.md) | ✅ Done |
 | 5 | [list-and-tag-filter-and-editor.md](implemented/05-list-and-tag-filter-and-editor.md) | ✅ Done |
-| 7 | [Worker, D1, sign-in, deploy](implemented/07-worker-d1-sign-in-deploy.md) | ✅ Done (code); owner setup and live checks pending |
+| 7 | [Worker, D1, sign-in, deploy](implemented/07-worker-d1-sign-in-deploy.md) | ✅ Done; live at tracker.ingles.place (2026-11-24) |
+| 14 | [Glucose ingest](implemented/14-glucose-ingest.md) | ✅ Done (code); owner setup and the first live run (LibreLinkUp or the HA fallback) pending |
 
 The food log (Food, Food History, targets in Settings, editing an entry, serving size, the Refresh app button) was
 built without a plan and is on `main` (PRs #2–#5, and the `claude/gifted-pasteur-ok1yl7` merge on 2026-11-24).
