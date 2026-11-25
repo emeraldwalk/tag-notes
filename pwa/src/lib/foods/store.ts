@@ -1,119 +1,31 @@
-import { DATE_INDEX, FOODS_STORE, openDatabase, requestToPromise, transactionDone } from '../db';
-import type { FoodEntry, FoodStore, ImportableFoodEntry } from './types';
+import { api, ApiError } from '../api';
+import type { FoodEntry, FoodStore } from './types';
 
-function sortByCreatedAtDesc(entries: FoodEntry[]): FoodEntry[] {
-  return [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-/**
- * Creates a `FoodStore` backed by the same IndexedDB database as notes
- * (`tag-notes`), using a separate `foods` object store keyed by `id` with
- * an index on `date` for per-day stats.
- */
-export function createIndexedDbFoodStore(): FoodStore {
-  let dbPromise: Promise<IDBDatabase> | undefined;
-
-  function getDb(): Promise<IDBDatabase> {
-    if (!dbPromise) {
-      dbPromise = openDatabase();
-    }
-    return dbPromise;
-  }
-
-  async function list(): Promise<FoodEntry[]> {
-    const db = await getDb();
-    const tx = db.transaction(FOODS_STORE, 'readonly');
-    const entries = await requestToPromise(tx.objectStore(FOODS_STORE).getAll());
-    return sortByCreatedAtDesc(entries);
-  }
-
-  async function listByDate(date: string): Promise<FoodEntry[]> {
-    const db = await getDb();
-    const tx = db.transaction(FOODS_STORE, 'readonly');
-    const index = tx.objectStore(FOODS_STORE).index(DATE_INDEX);
-    const entries = await requestToPromise(index.getAll(IDBKeyRange.only(date)));
-    return sortByCreatedAtDesc(entries);
-  }
-
-  async function create(entry: Omit<FoodEntry, 'id' | 'createdAt'>): Promise<FoodEntry> {
-    const record: FoodEntry = {
-      ...entry,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-
-    const db = await getDb();
-    const tx = db.transaction(FOODS_STORE, 'readwrite');
-    tx.objectStore(FOODS_STORE).put(record);
-    await transactionDone(tx);
-
-    return record;
-  }
-
-  async function update(id: string, entry: Omit<FoodEntry, 'id' | 'createdAt'>): Promise<FoodEntry> {
-    const db = await getDb();
-    const tx = db.transaction(FOODS_STORE, 'readwrite');
-    const store = tx.objectStore(FOODS_STORE);
-
-    const existing = await requestToPromise(store.get(id));
-    if (!existing) {
-      tx.abort();
-      throw new Error(`Food entry not found: ${id}`);
-    }
-
-    const updated: FoodEntry = { ...entry, id: existing.id, createdAt: existing.createdAt };
-    store.put(updated);
-    await transactionDone(tx);
-
-    return updated;
-  }
-
-  async function remove(id: string): Promise<void> {
-    const db = await getDb();
-    const tx = db.transaction(FOODS_STORE, 'readwrite');
-    tx.objectStore(FOODS_STORE).delete(id);
-    await transactionDone(tx);
-  }
-
-  async function listRecentDistinct(): Promise<FoodEntry[]> {
-    const entries = await list();
-    const seen = new Set<string>();
-    const result: FoodEntry[] = [];
-    for (const entry of entries) {
-      const key = entry.name.trim().toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      result.push(entry);
-    }
-    return result;
-  }
-
-  async function importAll(entries: ImportableFoodEntry[]): Promise<void> {
-    const db = await getDb();
-    const tx = db.transaction(FOODS_STORE, 'readwrite');
-    const store = tx.objectStore(FOODS_STORE);
-    const now = new Date().toISOString();
-
-    for (const entry of entries) {
-      const record: FoodEntry = {
-        ...entry,
-        id: entry.id ?? crypto.randomUUID(),
-        createdAt: entry.createdAt ?? now,
-      };
-      if (record.servingSize === undefined) delete record.servingSize;
-      store.put(record);
-    }
-
-    await transactionDone(tx);
-  }
-
+/** The `FoodStore` over the Worker's `/api/foods`. */
+export function createHttpFoodStore(): FoodStore {
   return {
-    list,
-    listByDate,
-    create,
-    update,
-    remove,
-    listRecentDistinct,
-    importAll,
+    async list() {
+      return (await api<{ foods: FoodEntry[] }>('/foods')).foods;
+    },
+    async listByDate(date) {
+      return (await api<{ foods: FoodEntry[] }>(`/foods?date=${encodeURIComponent(date)}`)).foods;
+    },
+    async create(entry) {
+      return (await api<{ food: FoodEntry }>('/foods', { method: 'POST', body: entry })).food;
+    },
+    async update(id, entry) {
+      return (await api<{ food: FoodEntry }>(`/foods/${encodeURIComponent(id)}`, { method: 'PUT', body: entry })).food;
+    },
+    async remove(id) {
+      try {
+        await api<void>(`/foods/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return;
+        throw err;
+      }
+    },
+    async listRecentDistinct() {
+      return (await api<{ foods: FoodEntry[] }>('/foods/recent')).foods;
+    },
   };
 }

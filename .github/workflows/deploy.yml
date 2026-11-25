@@ -1,15 +1,21 @@
 name: Deploy to GitHub Pages
 
+# Plan 8 moved the app to tracker.ingles.place (the Worker serves it, data in D1). Until the owner has exported
+# from the old GitHub Pages app and imported into the new one, Pages must keep serving the last IndexedDB build:
+# plan 6's commit (bca422c), which has Export All. So every push to main rebuilds that commit, never main's newer
+# code, and other branches no longer deploy a preview. Delete this workflow when GitHub Pages is retired (plan 8's
+# owner steps).
+
 on:
   push:
-    branches-ignore:
-      - gh-pages
+    branches:
+      - main
 
 permissions:
   contents: write
 
 concurrency:
-  group: pages-${{ github.ref == 'refs/heads/main' && 'main' || 'preview' }}
+  group: pages-main
   cancel-in-progress: true
 
 jobs:
@@ -17,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: bca422cda71e9fda96e7db21f6af1dcb34b312dd
 
       - uses: actions/setup-node@v6
         with:
@@ -27,34 +35,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build (production)
-        if: github.ref == 'refs/heads/main'
+      - name: Build (production, plan 6's IndexedDB app)
         run: npm run build -w tracker-pwa
 
-      - name: Build (preview)
-        if: github.ref != 'refs/heads/main'
-        env:
-          VITE_BASE_PATH: /tag-notes/preview/
-          VITE_APP_VARIANT: preview
-        run: npm run build -w tracker-pwa
-
-      # Both jobs publish to the same gh-pages branch: production deploys to
-      # its root, every other branch overwrites the shared /preview/ subpath.
-      # keep_files keeps each deploy from wiping the other's directory.
       - name: Deploy (production)
-        if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: pwa/dist
           destination_dir: .
-          keep_files: true
-
-      - name: Deploy (preview)
-        if: github.ref != 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: pwa/dist
-          destination_dir: preview
           keep_files: true

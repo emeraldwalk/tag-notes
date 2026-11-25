@@ -1,10 +1,9 @@
 import { createSignal, onMount, Show } from 'solid-js';
-import {
-  buildExportFile,
-  exportFileName,
-  InvalidExportFileError,
-  parseExportFile,
-} from '../lib/export';
+import AccountSection from '../components/AccountSection';
+import GlucoseSection from '../components/GlucoseSection';
+import { errorMessage } from '../lib/api';
+import { exportAll, importBundle } from '../lib/backup';
+import { exportFileName, parseExportFile } from '../lib/export';
 import { foodStore } from '../lib/foods/store-instance';
 import { getFoodTargets, setFoodTargets } from '../lib/foods/targets';
 import { noteStore } from '../lib/notes/store-instance';
@@ -21,15 +20,31 @@ function Settings() {
   const [foodCount, setFoodCount] = createSignal(0);
   const [status, setStatus] = createSignal<Status | undefined>();
   const [refreshing, setRefreshing] = createSignal(false);
-  const initialTargets = getFoodTargets();
-  const [proteinTarget, setProteinTarget] = createSignal(String(initialTargets.protein));
-  const [calorieTarget, setCalorieTarget] = createSignal(String(initialTargets.calories));
+  const [busy, setBusy] = createSignal(false);
+  const [proteinTarget, setProteinTarget] = createSignal('');
+  const [calorieTarget, setCalorieTarget] = createSignal('');
   let fileInput: HTMLInputElement | undefined;
 
+  const showError = (err: unknown) => setStatus({ kind: 'error', message: errorMessage(err) });
+
   const refreshCount = async () => {
-    const [notes, foods] = await Promise.all([noteStore.list(), foodStore.list()]);
-    setNoteCount(notes.length);
-    setFoodCount(foods.length);
+    try {
+      const [notes, foods] = await Promise.all([noteStore.list(), foodStore.list()]);
+      setNoteCount(notes.length);
+      setFoodCount(foods.length);
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const loadTargets = async () => {
+    try {
+      const targets = await getFoodTargets();
+      setProteinTarget(String(targets.protein));
+      setCalorieTarget(String(targets.calories));
+    } catch (err) {
+      showError(err);
+    }
   };
 
   const noteCountText = (count: number) => `${count} note${count === 1 ? '' : 's'}`;
@@ -37,20 +52,31 @@ function Settings() {
 
   onMount(() => {
     void refreshCount();
+    void loadTargets();
   });
 
-  const handleSaveTargets = (event: Event) => {
+  const handleSaveTargets = async (event: Event) => {
     event.preventDefault();
-    setFoodTargets({
-      protein: Number(proteinTarget()) || 0,
-      calories: Number(calorieTarget()) || 0,
-    });
-    setStatus({ kind: 'success', message: 'Food targets saved.' });
+    try {
+      await setFoodTargets({
+        protein: Number(proteinTarget()) || 0,
+        calories: Number(calorieTarget()) || 0,
+      });
+      setStatus({ kind: 'success', message: 'Food targets saved.' });
+    } catch (err) {
+      showError(err);
+    }
   };
 
   const handleExport = async () => {
-    const [notes, foods] = await Promise.all([noteStore.list(), foodStore.list()]);
-    const file = buildExportFile({ notes, foods, foodTargets: getFoodTargets() });
+    let file;
+    try {
+      file = await exportAll();
+    } catch (err) {
+      showError(err);
+      return;
+    }
+    const { notes, foods } = file;
     const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
@@ -76,27 +102,24 @@ function Settings() {
     const file = input.files?.[0];
     if (!file) return;
 
+    setBusy(true);
+    setStatus(undefined);
     try {
       const bundle = parseExportFile(await file.text());
-      await noteStore.importAll(bundle.notes);
-      await foodStore.importAll(bundle.foods);
-      if (bundle.foodTargets) {
-        setFoodTargets(bundle.foodTargets);
-        setProteinTarget(String(bundle.foodTargets.protein));
-        setCalorieTarget(String(bundle.foodTargets.calories));
-      }
+      const result = await importBundle(bundle);
+      if (result.targets) await loadTargets();
       await refreshCount();
-      const counts = `${noteCountText(bundle.notes.length)}, ${foodCountText(bundle.foods.length)}`;
+      const counts = `${noteCountText(result.notes)}, ${foodCountText(result.foods)}`;
+      const skipped = result.skipped > 0 ? ` Skipped ${result.skipped} that belong to another account.` : '';
       setStatus({
         kind: 'success',
-        message: bundle.foodTargets
-          ? `Imported ${counts} and food targets.`
-          : `Imported ${counts}.`,
+        message: (result.targets ? `Imported ${counts} and food targets.` : `Imported ${counts}.`) + skipped,
       });
     } catch (err) {
-      const message = err instanceof InvalidExportFileError ? err.message : 'Import failed.';
-      setStatus({ kind: 'error', message });
+      // An import stopped part-way keeps what was saved; importing the same file again is safe (by id).
+      showError(err);
     } finally {
+      setBusy(false);
       input.value = '';
     }
   };
@@ -107,7 +130,7 @@ function Settings() {
 
       <section class={styles.section}>
         <h2 class={styles.sectionTitle}>Food Targets</h2>
-        <form class={styles.targetForm} onSubmit={handleSaveTargets}>
+        <form class={styles.targetForm} onSubmit={(event) => void handleSaveTargets(event)}>
           <label class={styles.targetField}>
             <span>Daily protein target (g)</span>
             <input
@@ -144,8 +167,13 @@ function Settings() {
           <button type="button" class={styles.actionButton} onClick={() => void handleExport()}>
             Export All
           </button>
-          <button type="button" class={styles.actionButton} onClick={() => fileInput?.click()}>
-            Import
+          <button
+            type="button"
+            class={styles.actionButton}
+            disabled={busy()}
+            onClick={() => fileInput?.click()}
+          >
+            {busy() ? 'Importing…' : 'Import'}
           </button>
         </div>
 
@@ -172,10 +200,21 @@ function Settings() {
 
         <p class={styles.hint}>
           Export All saves notes, food entries and food targets in one file.
-          Importing merges with what's here: entries whose id matches an
-          existing one replace it, others are added. Food targets in the file
-          replace the current ones.
+          Importing a file (from this app or the old Tag Notes app) merges it
+          into your account: entries whose id matches an existing one replace
+          it, others are added. Food targets in the file replace the current
+          ones.
         </p>
+      </section>
+
+      <section class={styles.section}>
+        <h2 class={styles.sectionTitle}>Glucose</h2>
+        <GlucoseSection />
+      </section>
+
+      <section class={styles.section}>
+        <h2 class={styles.sectionTitle}>Account</h2>
+        <AccountSection />
       </section>
 
       <section class={styles.section}>
@@ -192,7 +231,7 @@ function Settings() {
         </div>
         <p class={styles.hint}>
           Clears the cached app files and reloads, so you get the latest
-          version. Your notes and food entries are stored separately and are
+          version. Your notes and food entries are on the server and are
           never affected.
         </p>
       </section>

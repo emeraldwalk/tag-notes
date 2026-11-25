@@ -1,67 +1,44 @@
 import { env } from 'cloudflare:test';
-import type { Hono } from 'hono';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type AppEnv, createApp } from '../src/app';
-import { createTrackerAuth, ORIGIN, SESSION_COOKIE } from '../src/auth';
-import { FakeIdp } from './fakeIdp';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { ORIGIN, SESSION_COOKIE } from '../src/auth';
+import { Jar, ME, send, signIn, useHarness } from './harness';
 
-const SECRET = 'test-cookie-secret-at-least-32-characters';
-const ME = { sub: 'sub-brian', sid: 'sid-1', preferred_username: 'brian', name: 'Brian <Owner>' };
-
-let idp: FakeIdp;
-let app: Hono<AppEnv>;
-
-/** A browser's cookies: Set-Cookie lines applied in order; Max-Age=0 deletes. */
-class Jar {
-  readonly cookies = new Map<string, string>();
-  take(res: Response): Response {
-    for (const line of res.headers.getSetCookie()) {
-      const [pair] = line.split(';') as [string];
-      const at = pair.indexOf('=');
-      const name = pair.slice(0, at);
-      if (/Max-Age=0(;|$)/i.test(line)) this.cookies.delete(name);
-      else this.cookies.set(name, pair.slice(at + 1));
-    }
-    return res;
-  }
-  header(): string {
-    return [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
-  }
-}
-
-async function get(jar: Jar, path: string, init: RequestInit = {}): Promise<Response> {
-  const headers = new Headers(init.headers);
-  if (jar.cookies.size > 0) headers.set('Cookie', jar.header());
-  return jar.take(await app.fetch(new Request(`${ORIGIN}${path}`, { ...init, headers })));
-}
-
-async function signIn(jar: Jar): Promise<void> {
-  idp.claims = ME;
-  const login = await get(jar, '/auth/login?returnTo=/');
-  expect(login.status).toBe(302);
-  const back = new URL(idp.authorizeRedirect(login.headers.get('Location')!));
-  const done = await get(jar, back.pathname + back.search);
-  expect(done.status).toBe(302);
-  expect(jar.cookies.has(SESSION_COOKIE)).toBe(true);
-}
-
-beforeEach(async () => {
-  idp = await new FakeIdp().start();
-  const auth = createTrackerAuth({ issuer: idp.issuer, clientId: idp.clientId, clientSecret: idp.clientSecret, cookieSecret: SECRET });
-  app = createApp({ auth, commit: 'abc1234', db: env.DB, haToken: 'test-ha-token', ownerUserId: 'sub-brian' });
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
+const h = useHarness();
+const get = (jar: Jar, path: string, init: RequestInit = {}) => send(h, jar, path, init);
 
 describe('signed out', () => {
-  it('sends the home page to the IdP, coming back to /', async () => {
-    const res = await get(new Jar(), '/');
+  it('sends a page request to the IdP, coming back to the same path', async () => {
+    const res = await get(new Jar(), '/food/history?x=1');
     expect(res.status).toBe(302);
     const location = new URL(res.headers.get('Location')!);
-    expect(location.origin).toBe(idp.issuer);
+    expect(location.origin).toBe(h.idp.issuer);
     expect(location.searchParams.get('redirect_uri')).toBe(`${ORIGIN}/auth/callback`);
+    expect(h.assetRequests).toEqual([]);
+
+    // The login round trip lands back on the page.
+    const jar = new Jar();
+    h.idp.claims = ME;
+    const login = await get(jar, '/food/history?x=1');
+    const back = new URL(h.idp.authorizeRedirect(login.headers.get('Location')!));
+    const done = await get(jar, back.pathname + back.search);
+    expect(done.headers.get('Location')).toMatch(/\/food\/history\?x=1$/);
+  });
+
+  it('sends the home page to the IdP too', async () => {
+    expect((await get(new Jar(), '/')).status).toBe(302);
+  });
+
+  it('serves the manifest, icons and service worker without a session', async () => {
+    for (const path of ['/manifest.webmanifest', '/pwa-192x192.png', '/apple-touch-icon-180x180.png', '/maskable-icon-512x512.png', '/sw.js', '/registerSW.js', '/workbox-5f1d2c3a.js', '/favicon.ico']) {
+      const res = await get(new Jar(), path);
+      expect(res.status, path).toBe(200);
+    }
+    expect(await (await get(new Jar(), '/manifest.webmanifest')).json()).toEqual({ name: 'Tracker' });
+  });
+
+  it('keeps other files behind sign-in', async () => {
+    expect((await get(new Jar(), '/assets/index-abc.js')).status).toBe(302);
+    expect((await get(new Jar(), '/index.html')).status).toBe(302);
   });
 
   it('answers the API with a JSON 401, not a redirect', async () => {
@@ -77,51 +54,50 @@ describe('signed out', () => {
 });
 
 describe('signed in', () => {
-  it('returns who I am from /api/me', async () => {
-    const jar = new Jar();
-    await signIn(jar);
+  it('returns who I am and the build from /api/me', async () => {
+    const jar = await signIn(h, new Jar());
     const res = await get(jar, '/api/me');
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ sub: 'sub-brian', name: 'Brian <Owner>' });
+    expect(await res.json()).toEqual({ sub: 'sub-brian', name: 'Brian <Owner>', build: 'abc1234' });
   });
 
-  it('shows the placeholder page with name, id and build, escaped', async () => {
-    const jar = new Jar();
-    await signIn(jar);
-    const res = await get(jar, '/');
-    expect(res.status).toBe(200);
-    expect(res.headers.get('Content-Type')).toContain('text/html');
-    const html = await res.text();
-    expect(html).toContain('Brian &lt;Owner&gt;');
-    expect(html).not.toContain('Brian <Owner>');
-    expect(html).toContain('sub-brian');
-    expect(html).toContain('abc1234');
-    expect(html).toContain('/auth/logout');
-    expect(html).toContain('No readings yet');
+  it('serves the PWA for app paths (the SPA fallback is the binding’s)', async () => {
+    const jar = await signIn(h, new Jar());
+    for (const path of ['/', '/notes/history', '/food']) {
+      const res = await get(jar, path);
+      expect(res.status, path).toBe(200);
+      expect(res.headers.get('Content-Type')).toContain('text/html');
+      expect(res.headers.get('Cache-Control')).toBe('private, no-cache');
+    }
+    expect(h.assetRequests).toEqual(['/', '/notes/history', '/food']);
   });
 
   it('answers unknown API paths with a JSON 404', async () => {
-    const jar = new Jar();
-    await signIn(jar);
+    const jar = await signIn(h, new Jar());
     const res = await get(jar, '/api/nope');
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: 'not_found' });
   });
 
+  it('does not hand unknown /auth paths to the PWA', async () => {
+    const jar = await signIn(h, new Jar());
+    expect((await get(jar, '/auth/nope')).status).toBe(404);
+  });
+
   it('sets a secure, http-only session cookie', async () => {
     const jar = new Jar();
-    idp.claims = ME;
+    h.idp.claims = ME;
     const login = await get(jar, '/auth/login?returnTo=/');
-    const back = new URL(idp.authorizeRedirect(login.headers.get('Location')!));
-    const done = await app.fetch(new Request(`${ORIGIN}${back.pathname}${back.search}`, { headers: { Cookie: jar.header() } }));
+    const back = new URL(h.idp.authorizeRedirect(login.headers.get('Location')!));
+    const done = await h.app.fetch(new Request(`${ORIGIN}${back.pathname}${back.search}`, { headers: { Cookie: jar.header() } }));
     const line = done.headers.getSetCookie().find((l) => l.startsWith(`${SESSION_COOKIE}=`))!;
     expect(line).toMatch(/HttpOnly/i);
     expect(line).toMatch(/Secure/i);
   });
 });
 
-it('404s other paths', async () => {
-  const res = await get(new Jar(), '/elsewhere');
+it('404s non-GET requests outside the API', async () => {
+  const res = await get(new Jar(), '/elsewhere', { method: 'POST' });
   expect(res.status).toBe(404);
 });
 
@@ -144,8 +120,7 @@ describe('glucose reads', () => {
   });
 
   it('returns only my readings in the range, oldest first', async () => {
-    const jar = new Jar();
-    await signIn(jar);
+    const jar = await signIn(h, new Jar());
     const res = await get(jar, '/api/glucose?from=2026-11-24T00:00:00Z&to=2026-11-24T10:59:59-01:00');
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
@@ -157,20 +132,16 @@ describe('glucose reads', () => {
   });
 
   it('refuses bad or too-long ranges', async () => {
-    const jar = new Jar();
-    await signIn(jar);
+    const jar = await signIn(h, new Jar());
     for (const q of ['', '?from=yesterday&to=today', '?from=2026-11-24T00:00:00&to=2026-11-25T00:00:00', '?from=2026-12-01T00:00:00Z&to=2026-11-01T00:00:00Z', '?from=2026-10-01T00:00:00Z&to=2026-11-24T00:00:00Z']) {
       expect((await get(jar, `/api/glucose${q}`)).status, q).toBe(400);
     }
   });
 
   it('reports the last reading and the poller status', async () => {
-    const jar = new Jar();
-    await signIn(jar);
+    const jar = await signIn(h, new Jar());
     const body = (await (await get(jar, '/api/glucose/status')).json()) as Record<string, unknown>;
     expect(body.lastReading).toEqual({ ts: '2026-11-24T11:00:00Z', mgDl: 140, trend: 4 });
     expect(Object.keys(body.llu as object).sort()).toEqual(['backoffUntil', 'lastError', 'lastOkAt', 'lastRunAt']);
-    const html = await (await get(jar, '/')).text();
-    expect(html).toContain('140 mg/dL ↗');
   });
 });

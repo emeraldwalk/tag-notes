@@ -1,5 +1,6 @@
-import type { FoodTargets } from './foods/targets';
-import type { FoodEntry, ImportableFoodEntry } from './foods/types';
+// Shared with the Worker (worker/src/import.ts and foods.ts validate with these): keep this file free of browser APIs
+// and of imports other than types.
+import type { FoodEntry, FoodTargets, ImportableFoodEntry } from './foods/types';
 import type { ImportableNote, Note } from './notes/types';
 
 /** Identifies the file format, not the app's name; unchanged so old files still match. */
@@ -78,52 +79,71 @@ function parseNotes(entries: unknown[]): ImportableNote[] {
 
 const FOOD_NUMBER_FIELDS = ['quantity', 'protein', 'calories', 'carbs'] as const;
 
-function parseFoods(entries: unknown[]): ImportableFoodEntry[] {
-  return entries.map((entry, index) => {
-    const invalid = (field: string, rule: string) =>
-      new InvalidExportFileError(`Food at index ${index} has an invalid "${field}" (${rule}).`);
+/** An ISO 8601 time with a zone (`Z` or `±hh:mm`), as `eatenAt` must be. */
+export const ISO_WITH_ZONE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 
-    if (!isRecord(entry)) {
-      throw new InvalidExportFileError(`Food at index ${index} is not an object.`);
-    }
-
-    const name = entry['name'];
-    if (typeof name !== 'string' || name.trim() === '') {
-      throw invalid('name', 'expected a non-empty string');
-    }
-
-    const servingSize = entry['servingSize'];
-    if (servingSize !== undefined && typeof servingSize !== 'string') {
-      throw invalid('servingSize', 'expected a string');
-    }
-
-    const numbers = {} as Record<(typeof FOOD_NUMBER_FIELDS)[number], number>;
-    for (const field of FOOD_NUMBER_FIELDS) {
-      const value = entry[field];
-      if (!isNonNegativeNumber(value)) {
-        throw invalid(field, 'expected a number ≥ 0');
-      }
-      numbers[field] = value;
-    }
-
-    const date = entry['date'];
-    if (typeof date !== 'string' || !DATE_KEY.test(date)) {
-      throw invalid('date', 'expected YYYY-MM-DD');
-    }
-
-    const food: ImportableFoodEntry = {
-      id: optionalString(entry['id']),
-      name,
-      ...numbers,
-      date,
-      createdAt: optionalString(entry['createdAt']),
-    };
-    if (servingSize !== undefined) food.servingSize = servingSize;
-    return food;
-  });
+export function isIsoWithZone(value: unknown): value is string {
+  return typeof value === 'string' && ISO_WITH_ZONE.test(value) && !Number.isNaN(Date.parse(value));
 }
 
-function parseFoodTargets(value: unknown): FoodTargets {
+/**
+ * Validates one food entry (from a file, or a request body: `what` names it in messages, e.g. "Food at index 3").
+ * `eatenAt` may be absent or null (unknown); when present it must be ISO 8601 with a zone.
+ */
+export function parseFoodEntry(entry: unknown, what: string): ImportableFoodEntry {
+  const invalid = (field: string, rule: string) =>
+    new InvalidExportFileError(`${what} has an invalid "${field}" (${rule}).`);
+
+  if (!isRecord(entry)) {
+    throw new InvalidExportFileError(`${what} is not an object.`);
+  }
+
+  const name = entry['name'];
+  if (typeof name !== 'string' || name.trim() === '') {
+    throw invalid('name', 'expected a non-empty string');
+  }
+
+  const servingSize = entry['servingSize'];
+  if (servingSize !== undefined && servingSize !== null && typeof servingSize !== 'string') {
+    throw invalid('servingSize', 'expected a string');
+  }
+
+  const numbers = {} as Record<(typeof FOOD_NUMBER_FIELDS)[number], number>;
+  for (const field of FOOD_NUMBER_FIELDS) {
+    const value = entry[field];
+    if (!isNonNegativeNumber(value)) {
+      throw invalid(field, 'expected a number ≥ 0');
+    }
+    numbers[field] = value;
+  }
+
+  const date = entry['date'];
+  if (typeof date !== 'string' || !DATE_KEY.test(date)) {
+    throw invalid('date', 'expected YYYY-MM-DD');
+  }
+
+  const eatenAt = entry['eatenAt'];
+  if (eatenAt !== undefined && eatenAt !== null && !isIsoWithZone(eatenAt)) {
+    throw invalid('eatenAt', 'expected an ISO 8601 time with a zone');
+  }
+
+  const food: ImportableFoodEntry = {
+    id: optionalString(entry['id']),
+    name,
+    ...numbers,
+    date,
+    createdAt: optionalString(entry['createdAt']),
+  };
+  if (typeof servingSize === 'string') food.servingSize = servingSize;
+  if (typeof eatenAt === 'string') food.eatenAt = eatenAt;
+  return food;
+}
+
+function parseFoods(entries: unknown[]): ImportableFoodEntry[] {
+  return entries.map((entry, index) => parseFoodEntry(entry, `Food at index ${index}`));
+}
+
+export function parseFoodTargets(value: unknown): FoodTargets {
   if (
     !isRecord(value) ||
     !isNonNegativeNumber(value['protein']) ||
@@ -139,8 +159,8 @@ function parseFoodTargets(value: unknown): FoodTargets {
 /**
  * Parses and validates an exported (or hand-edited) JSON file. Accepts a v2
  * file (notes, foods, food targets), a v1 file (notes only) or a bare array
- * of notes. Ids and timestamps are passed through when present so the stores'
- * `importAll` can upsert by id.
+ * of notes. Ids and timestamps are passed through when present so the server's
+ * import can upsert by id.
  */
 export function parseExportFile(json: string): ImportBundle {
   let data: unknown;

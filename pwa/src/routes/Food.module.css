@@ -102,6 +102,22 @@
   background: #fff;
 }
 
+.timeInput {
+  width: 7rem;
+  box-sizing: border-box;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.95rem;
+  border: 1px solid #d1d1d6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #ff3b30;
+}
+
 .addButton {
   flex: 1;
   padding: 0.6rem;
@@ -184,6 +200,12 @@
 .rowName {
   font-size: 1rem;
   font-weight: 600;
+}
+
+.rowTime {
+  font-weight: 400;
+  color: #8e8e93;
+  font-variant-numeric: tabular-nums;
 }
 
 .rowQuantity {

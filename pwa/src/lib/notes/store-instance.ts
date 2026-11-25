@@ -1,8 +1,4 @@
-import { createIndexedDbNoteStore } from './store';
+import { createHttpNoteStore } from './store';
 
-/**
- * Shared `NoteStore` instance for the whole app. UI code should import this
- * rather than constructing its own store, so all routes/components operate
- * on the same underlying IndexedDB connection.
- */
-export const noteStore = createIndexedDbNoteStore();
+/** Shared `NoteStore` for the whole app (plan 8: the Worker's API). UI code imports this, never `fetch`. */
+export const noteStore = createHttpNoteStore();

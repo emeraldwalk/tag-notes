@@ -1,6 +1,8 @@
 import { createMemo, createSignal, For, onMount, Show } from 'solid-js';
 import NavBar from '../components/NavBar';
+import { errorMessage } from '../lib/api';
 import { foodStore } from '../lib/foods/store-instance';
+import { formatEatenAt } from '../lib/foods/time';
 import type { FoodEntry } from '../lib/foods/types';
 import styles from './FoodHistory.module.css';
 
@@ -23,9 +25,17 @@ function formatDate(dateKey: string): string {
 
 function FoodHistory() {
   const [entries, setEntries] = createSignal<FoodEntry[]>([]);
+  const [loaded, setLoaded] = createSignal(false);
+  const [error, setError] = createSignal<string | undefined>();
 
   onMount(async () => {
-    setEntries(await foodStore.list());
+    try {
+      setEntries(await foodStore.list());
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoaded(true);
+    }
   });
 
   const groups = createMemo<DayGroup[]>(() => {
@@ -54,7 +64,18 @@ function FoodHistory() {
     <div class={styles.container}>
       <NavBar title="History" backHref="/food" backLabel="Today" />
 
-      <Show when={groups().length > 0} fallback={<div class={styles.emptyState}>No food logged yet</div>}>
+      <Show when={error()}>
+        {(message) => (
+          <p class={styles.error} role="alert">
+            {message()}
+          </p>
+        )}
+      </Show>
+
+      <Show
+        when={groups().length > 0}
+        fallback={<div class={styles.emptyState}>{loaded() && !error() ? 'No food logged yet' : ''}</div>}
+      >
         <div class={styles.dayList}>
           <For each={groups()}>
             {(group) => (
@@ -71,6 +92,9 @@ function FoodHistory() {
                     {(entry) => (
                       <div class={styles.entryRow}>
                         <span class={styles.entryName}>
+                          <Show when={entry.eatenAt}>
+                            <span class={styles.entryTime}>{formatEatenAt(entry.eatenAt)} </span>
+                          </Show>
                           {entry.name}
                           <Show when={entry.quantity !== 1}>
                             <span class={styles.entryQuantity}> x{entry.quantity}</span>

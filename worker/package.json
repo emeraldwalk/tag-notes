@@ -8,12 +8,13 @@
   },
   "scripts": {
     "dev": "wrangler dev",
-    "build": "wrangler deploy --dry-run",
+    "build:pwa": "cd ../pwa && VITE_BASE_PATH=/ npm run build",
+    "build": "npm run build:pwa && wrangler deploy --dry-run",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm run build && npm test",
-    "deploy": "wrangler d1 migrations apply tracker --remote && wrangler deploy --var BUILD_COMMIT:${WORKERS_CI_COMMIT_SHA:-dev}"
+    "deploy": "npm run build:pwa && wrangler d1 migrations apply tracker --remote && wrangler deploy --var BUILD_COMMIT:${WORKERS_CI_COMMIT_SHA:-dev}"
   },
   "dependencies": {
     "@emeraldwalk/idp-client": "0.1.6",

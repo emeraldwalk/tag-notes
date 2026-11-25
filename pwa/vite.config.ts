@@ -2,10 +2,8 @@ import { defineConfig } from 'vitest/config'
 import solid from 'vite-plugin-solid'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Overridable so CI can deploy feature branches under a different subpath
-// (e.g. /tag-notes/preview/) without touching the production build.
-const base = process.env.VITE_BASE_PATH ?? '/tag-notes/'
-const isPreview = process.env.VITE_APP_VARIANT === 'preview'
+// Plan 8: served by the tracker Worker at the site root. Overridable for a build under a subpath.
+const base = process.env.VITE_BASE_PATH ?? '/'
 
 export default defineConfig({
   base,
@@ -14,9 +12,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: isPreview ? 'Tag Notes (Preview)' : 'Tag Notes',
-        short_name: isPreview ? 'Notes Preview' : 'Notes',
-        description: 'Capture freeform notes with embedded titles and tags.',
+        name: 'Tracker',
+        short_name: 'Tracker',
+        description: 'Notes, food and the health data behind blood sugar highs.',
+        scope: base,
+        start_url: base,
         theme_color: '#2f6f4f',
         background_color: '#fefefe',
         display: 'standalone',
@@ -34,17 +34,12 @@ export default defineConfig({
       devOptions: {
         enabled: true,
       },
-      // The production service worker registers with scope "/tag-notes/",
-      // which also covers "/tag-notes/preview/". Without this denylist its
-      // NavigationRoute intercepts every navigation in that scope -
-      // including a first-ever visit to /preview/ - and serves back the
-      // production index.html before the preview build's own service
-      // worker ever gets a chance to register.
-      workbox: isPreview
-        ? undefined
-        : {
-            navigateFallbackDenylist: [/^\/tag-notes\/preview\//],
-          },
+      // Only the app's own files are precached. Navigations to /api and /auth go to the network: sign-in
+      // redirects and JSON must never be answered with the cached index.html. No runtime caching: data comes from
+      // the API each time (online only).
+      workbox: {
+        navigateFallbackDenylist: [/^\/api\//, /^\/auth\//],
+      },
     }),
   ],
   test: {

@@ -2,6 +2,7 @@ import { A, useNavigate, useParams } from '@solidjs/router';
 import { createSignal, onMount, Show } from 'solid-js';
 import NavBar from '../components/NavBar';
 import NoteTextEditor from '../components/NoteTextEditor';
+import { errorMessage } from '../lib/api';
 import { noteStore } from '../lib/notes/store-instance';
 import type { Note } from '../lib/notes/types';
 import styles from './NoteEditor.module.css';
@@ -13,10 +14,16 @@ function NoteEditor() {
 
   const [note, setNote] = createSignal<Note | undefined>();
   const [loading, setLoading] = createSignal(true);
+  const [error, setError] = createSignal<string | undefined>();
 
   onMount(async () => {
-    setNote(await noteStore.get(id()));
-    setLoading(false);
+    try {
+      setNote(await noteStore.get(id()));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   });
 
   const handleSave = async (rawText: string) => {
@@ -38,7 +45,7 @@ function NoteEditor() {
           when={note()}
           fallback={
             <div class={styles.notFound}>
-              <p>Note not found</p>
+              <p>{error() ?? 'Note not found'}</p>
               <A href="/notes/history" class={styles.backLink}>
                 Back to list
               </A>

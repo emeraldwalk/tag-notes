@@ -56,6 +56,18 @@
   font-weight: 600;
 }
 
+.entryTime {
+  color: #8e8e93;
+  font-variant-numeric: tabular-nums;
+}
+
+.error {
+  margin: 0;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  color: #ff3b30;
+}
+
 .entryQuantity {
   font-weight: 400;
   color: #8e8e93;

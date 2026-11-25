@@ -1,12 +1,12 @@
 # 08 — Server storage
 
-- [ ] Migration `0002_notes_foods.sql`
-- [ ] Notes, foods, food targets and import APIs in the Worker
-- [ ] The Worker serves the PWA (built with base `/`), sign-in in front of it
-- [ ] HTTP `NoteStore` / `FoodStore` and async food targets in the PWA; IndexedDB stores removed
-- [ ] Meal time (`eatenAt`) on food entries: Food form and history
-- [ ] PWA manifest and service worker for the new home (`Tracker`, scope `/`, `/api` and `/auth` never cached)
-- [ ] Tests
+- [x] Migration `0002_notes_foods.sql`
+- [x] Notes, foods, food targets and import APIs in the Worker
+- [x] The Worker serves the PWA (built with base `/`), sign-in in front of it
+- [x] HTTP `NoteStore` / `FoodStore` and async food targets in the PWA; IndexedDB stores removed
+- [x] Meal time (`eatenAt`) on food entries: Food form and history
+- [x] PWA manifest and service worker for the new home (`Tracker`, scope `/`, `/api` and `/auth` never cached)
+- [x] Tests
 - [ ] Owner: push; migrate (export → import); then retire GitHub Pages and rename the repo (steps below)
 
 ## Goal
@@ -172,3 +172,22 @@ PWA: the HTTP stores against a faked `fetch` (shapes, 401 redirect).
 4. Airplane mode: saving shows an error and the form keeps its text.
 5. `wrangler tail`: CPU of `GET /api/notes` and the import, against 10 ms. If the import goes over with a large file,
    the PWA splits it into several requests.
+
+## Implementation notes (2026-11-25)
+
+- **GitHub Pages stays on plan 6's build.** `.github/workflows/deploy.yml` now checks out `bca422c` (plan 6, the last
+  IndexedDB build, with Export All) on every push to `main`, and preview deploys are gone. Pushing this plan can't
+  replace the old app with the server-backed one before its data is exported. The `/preview/` Workbox special case is
+  already gone from `pwa/vite.config.ts` (default base is now `/`); retiring Pages only deletes the workflow.
+- `NoteStore.importAll` / `FoodStore.importAll` (plan 6) are gone: import is server-side only. `pwa/src/lib/backup.ts`
+  has `exportAll()` and `importBundle()`; it posts the file to `/api/import` in chunks of 200 rows (each a v2 file;
+  targets with the last), so each request stays well inside 10 ms CPU without waiting for a measurement.
+- `/api/import` also answers `skipped` (rows whose id is another user's). Foods in a file that carry `eatenAt` (an
+  export from this app) keep it; the `createdAt` rule applies only to foods without one.
+- `export.ts` (shared with the Worker) gained `parseFoodEntry` / `parseFoodTargets` / `isIsoWithZone`, which the
+  food routes validate with too. `FoodTargets` moved to `foods/types.ts` (re-exported from `targets.ts`) so the Worker
+  doesn't type-check browser code.
+- `/api/me` also returns `build` (the short commit), shown in Settings → Account with the user id and Sign out.
+- `GET /api/foods/recent` is capped at 200 names. Notes list newest first by `updatedAt` (as the IndexedDB store did).
+- Food form: the time defaults to now and follows the clock until edited; editing an entry keeps its date and time
+  unless the time is changed (then it stays on the day it was eaten).

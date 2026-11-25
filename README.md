@@ -1,10 +1,12 @@
 # Tracker
 
 A personal tracker for notes, food, medicine and the health data behind blood sugar highs. It started as Tag Notes, a
-notes PWA, and is moving to `https://tracker.ingles.place`, a Cloudflare Worker with D1 behind the family IdP. Plans
-and decisions: [`.plans/plan.md`](.plans/plan.md).
+notes PWA, and now runs at `https://tracker.ingles.place`: a Cloudflare Worker that serves the PWA and its API, with
+the data in D1, behind the family IdP. Plans and decisions: [`.plans/plan.md`](.plans/plan.md).
 
-**Live app (until plan 8 moves it):** https://emeraldwalk.github.io/tag-notes/
+**Live app:** https://tracker.ingles.place. The old GitHub Pages app (https://emeraldwalk.github.io/tag-notes/, data
+in the browser) stays up, frozen at plan 6's build, until its data has been exported and imported here (plan 8's
+owner steps).
 
 ## Layout
 
@@ -12,8 +14,11 @@ npm workspaces, one `package-lock.json` at the root:
 
 | Path | What it is |
 | --- | --- |
-| `pwa/` | `tracker-pwa`: the SolidJS PWA. Data in the browser (IndexedDB) until plan 8. |
-| `worker/` | `tracker-worker`: the Worker `tracker` at `tracker.ingles.place`, with D1 `tracker` and IdP sign-in. |
+| `pwa/` | `tracker-pwa`: the SolidJS PWA. Online only: every read and save goes to the Worker's `/api`. |
+| `worker/` | `tracker-worker`: the Worker `tracker` at `tracker.ingles.place`, with D1 `tracker` and IdP sign-in. It serves the built PWA (`pwa/dist`) behind sign-in. |
+
+`pwa/src/lib/notes/parse.ts` and `pwa/src/lib/export.ts` are shared: the Worker imports them to parse notes and
+validate imports, so they must stay free of browser APIs.
 
 ## Development
 
@@ -27,15 +32,20 @@ npm run check          # every workspace: lint, types, build, tests
 After changing `worker/wrangler.jsonc`, run `npx wrangler types` from `worker/` and commit
 `worker-configuration.d.ts`.
 
+The Worker's build (`npm run build -w tracker-worker`) builds the PWA first, with base `/`. The Worker tests need
+`pwa/dist` to exist (the assets directory), which `npm run check` builds first. `npm start -w tracker-pwa` serves the
+UI alone; without the Worker behind it, every API call fails (sign-in only works at `tracker.ingles.place`).
+
 `node_modules` may be shared between a Mac and a Linux devcontainer; an install on one replaces the other's platform
 binaries (for example `@rollup/rollup-linux-x64-gnu`). That's fine: run `npm install` on the side you're working on.
 
 ## Deploying
 
-### PWA (GitHub Pages, until plan 8)
+### Old app (GitHub Pages, until retired)
 
-Pushes are built and deployed by [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml): `main` to the site
-root, every other branch to a shared `/preview/` path.
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) rebuilds plan 6's commit (`bca422c`, the last
+IndexedDB build, with Export All) on every push to `main`, so the old app keeps working until its data is moved.
+It is deleted when GitHub Pages is retired.
 
 ### Worker (`tracker.ingles.place`)
 
@@ -45,8 +55,8 @@ Claude commits; the owner pushes and holds the Cloudflare credentials. Cloudflar
 | --- | --- | --- | --- |
 | `tracker` | repo root | `npm run build -w tracker-worker` | `npm run deploy -w tracker-worker` |
 
-The deploy applies D1 migrations (`worker/migrations/`) first, and stamps the commit being built
-(`WORKERS_CI_COMMIT_SHA`) into the page footer. Non-production branch builds stay off.
+The deploy builds the PWA, applies D1 migrations (`worker/migrations/`), and stamps the commit being built
+(`WORKERS_CI_COMMIT_SHA`) into `/api/me` (shown in Settings → Account). Non-production branch builds stay off.
 
 One-time setup (owner):
 
@@ -65,7 +75,7 @@ One-time setup (owner):
 
 The Worker polls LibreLinkUp, the unofficial follower API behind Abbott's LibreLinkUp app, every 5 minutes. It signs
 in as a **follower account**, caches the token (about 180 days), and stores the latest reading plus the last ~12 hours
-of 15-minute points in `glucose_readings`. The home page shows the last reading and how the last run went. After a
+of 15-minute points in `glucose_readings`. Settings → Glucose shows the last reading and how the last run went. After a
 rate limit it pauses (`Retry-After`, else 30 minutes); after a refused sign-in it pauses an hour, so a wrong password
 can't lock the account.
 
@@ -73,12 +83,12 @@ Setup (owner):
 
 1. **Follower account:** a separate LibreView account with a different email. In the Libre 3 app: Share → Connected
    apps → LibreLinkUp → invite that email. Accept in the LibreLinkUp app once, and accept its terms there.
-2. **`OWNER_USER_ID`** in `worker/wrangler.jsonc`: your user id from the home page. Readings are stored for it.
+2. **`OWNER_USER_ID`** in `worker/wrangler.jsonc`: your user id from Settings → Account. Readings are stored for it.
    `LLU_REGION` is `us`; a wrong region is followed automatically.
 3. From `worker/`: `npx wrangler secret put` each of `LLU_EMAIL`, `LLU_PASSWORD` (the follower account) and
    `HA_INGEST_TOKEN` (`openssl rand -base64 32`; Home Assistant's token for `POST /api/ingest/glucose`, a different
    value from family-mail's secret of the same name).
-4. Push. Within 10 minutes the home page should show a reading matching the Libre app.
+4. Push. Within 10 minutes Settings → Glucose should show a reading matching the Libre app.
 
 If LibreView refuses the Worker (the page shows `http_403` or similar), switch to Home Assistant polling:
 [`docs/home-assistant.md`](docs/home-assistant.md).

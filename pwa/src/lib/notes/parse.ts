@@ -1,3 +1,4 @@
+// Shared with the Worker (worker/src/notes.ts), which parses notes on save: keep it free of browser APIs.
 import type { ParsedNote } from './types';
 
 /**
@@ -33,20 +34,20 @@ export function parseNoteText(rawText: string): ParsedNote {
     return { title: '', body: '', tags: [] };
   }
 
-  const title = lines[titleIndex].trim();
+  const title = (lines[titleIndex] ?? '').trim();
 
   // Ignore trailing blank lines when looking for the tag line, so trailing
   // newlines after the tag line (or trailing blank lines with no tag line)
   // don't prevent detection.
   let lastContentIndex = lines.length - 1;
-  while (lastContentIndex > titleIndex && lines[lastContentIndex].trim() === '') {
+  while (lastContentIndex > titleIndex && (lines[lastContentIndex] ?? '').trim() === '') {
     lastContentIndex--;
   }
 
   let endIndex = lines.length; // exclusive
   let tags: string[] = [];
 
-  const trimmedLastContentLine = lines[lastContentIndex].trim();
+  const trimmedLastContentLine = (lines[lastContentIndex] ?? '').trim();
 
   if (trimmedLastContentLine.startsWith(':') && lastContentIndex > titleIndex) {
     tags = parseTags(trimmedLastContentLine.slice(1));

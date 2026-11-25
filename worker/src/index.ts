@@ -19,6 +19,7 @@ function appFor(env: Env): Hono<AppEnv> {
     cached = {
       key,
       app: createApp({
+        assets: env.ASSETS,
         auth,
         commit: env.BUILD_COMMIT.slice(0, 7),
         db: env.DB,

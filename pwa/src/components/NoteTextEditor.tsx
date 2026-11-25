@@ -1,4 +1,5 @@
 import { createMemo, createSignal, For, Show } from 'solid-js';
+import { errorMessage } from '../lib/api';
 import { parseNoteText, parseTags, serializeNote } from '../lib/notes/parse';
 import styles from './NoteTextEditor.module.css';
 
@@ -25,6 +26,7 @@ function NoteTextEditor(props: NoteTextEditorProps) {
   const [tagsText, setTagsText] = createSignal(initial.tags.join(', '));
   const [saving, setSaving] = createSignal(false);
   const [justSaved, setJustSaved] = createSignal(false);
+  const [error, setError] = createSignal<string | undefined>();
 
   const tags = createMemo(() => parseTags(tagsText()));
 
@@ -35,12 +37,16 @@ function NoteTextEditor(props: NoteTextEditorProps) {
 
     setSaving(true);
     setJustSaved(false);
+    setError(undefined);
     try {
       await props.onSave(serializeNote(title(), body(), tags()));
       setTitle('');
       setBody('');
       setTagsText('');
       setJustSaved(true);
+    } catch (err) {
+      // Nothing is cleared: the text stays for another try.
+      setError(errorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -48,7 +54,12 @@ function NoteTextEditor(props: NoteTextEditorProps) {
 
   const handleDelete = async () => {
     if (!props.onDelete) return;
-    await props.onDelete();
+    setError(undefined);
+    try {
+      await props.onDelete();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
   };
 
   return (
@@ -96,6 +107,14 @@ function NoteTextEditor(props: NoteTextEditorProps) {
 
       <Show when={justSaved()}>
         <div class={styles.savedMessage}>Saved</div>
+      </Show>
+
+      <Show when={error()}>
+        {(message) => (
+          <div class={styles.errorMessage} role="alert">
+            {message()}
+          </div>
+        )}
       </Show>
 
       <div class={styles.actions}>

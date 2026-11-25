@@ -1,6 +1,7 @@
 import { useNavigate } from '@solidjs/router';
 import { createMemo, createSignal, For, onMount, Show } from 'solid-js';
 import NavBar from '../components/NavBar';
+import { errorMessage } from '../lib/api';
 import { noteStore } from '../lib/notes/store-instance';
 import type { Note } from '../lib/notes/types';
 import styles from './NoteHistory.module.css';
@@ -14,6 +15,7 @@ function NoteHistory() {
   const [untaggedOnly, setUntaggedOnly] = createSignal(false);
   const [hasUntagged, setHasUntagged] = createSignal(false);
   const [searchQuery, setSearchQuery] = createSignal('');
+  const [error, setError] = createSignal<string | undefined>();
 
   const refreshTags = async () => {
     setTags(await noteStore.listTags());
@@ -35,8 +37,17 @@ function NoteHistory() {
   };
 
   const refreshAll = async () => {
-    await Promise.all([refreshTags(), refreshNotes(), refreshHasUntagged()]);
+    await guard(Promise.all([refreshTags(), refreshNotes(), refreshHasUntagged()]));
   };
+
+  async function guard(work: Promise<unknown>) {
+    try {
+      await work;
+      setError(undefined);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
 
   onMount(() => {
     void refreshAll();
@@ -45,13 +56,13 @@ function NoteHistory() {
   const handleTagClick = (tag: string) => {
     setUntaggedOnly(false);
     setActiveTag((current) => (current === tag ? undefined : tag));
-    void refreshNotes();
+    void guard(refreshNotes());
   };
 
   const handleUntaggedClick = () => {
     setActiveTag(undefined);
     setUntaggedOnly((current) => !current);
-    void refreshNotes();
+    void guard(refreshNotes());
   };
 
   const formatTimestamp = (iso: string) => new Date(iso).toLocaleString();
@@ -72,6 +83,14 @@ function NoteHistory() {
         value={searchQuery()}
         onInput={(event) => setSearchQuery(event.currentTarget.value)}
       />
+
+      <Show when={error()}>
+        {(message) => (
+          <p class={styles.error} role="alert">
+            {message()}
+          </p>
+        )}
+      </Show>
 
       <Show when={tags().length > 0 || hasUntagged()}>
         <div class={styles.tagFilter}>

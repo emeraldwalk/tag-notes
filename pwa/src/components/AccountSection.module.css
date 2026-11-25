@@ -1,0 +1,38 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 0.75rem;
+  margin: 0;
+}
+
+.list dt {
+  font-weight: 600;
+}
+
+.list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.id {
+  user-select: all;
+}
+
+.signOut {
+  align-self: flex-start;
+  color: #007aff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.error {
+  margin: 0;
+  color: #ff3b30;
+}

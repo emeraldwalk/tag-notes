@@ -2,7 +2,7 @@
 
 ## Glucose fallback (plan 14)
 
-Use this only if LibreView refuses the Worker's own LibreLinkUp polling: the home page's "LibreLinkUp" line shows
+Use this only if LibreView refuses the Worker's own LibreLinkUp polling: Settings → Glucose, its "LibreLinkUp" line, shows
 `http_403` (or similar) instead of a recent success. Home Assistant then polls LibreLinkUp from home and pushes each
 new reading to Tracker.
 

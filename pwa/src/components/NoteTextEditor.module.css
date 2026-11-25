@@ -101,3 +101,9 @@
   font-size: 0.85rem;
   color: #34c759;
 }
+
+.errorMessage {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #ff3b30;
+}
