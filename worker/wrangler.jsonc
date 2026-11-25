@@ -28,7 +28,7 @@
     // Overridden at deploy with the commit Workers Builds is building (package.json "deploy").
     "BUILD_COMMIT": "dev",
     // Plan 14: the IdP user id (shown on the home page) that polled and pushed glucose readings belong to.
-    "OWNER_USER_ID": "",
+    "OWNER_USER_ID": "j8tSwNOzQWO3auoNg1IHMUJAnu3sGgYY",
     // LibreLinkUp's region ("us", "eu", ...; a wrong one is redirected) and the app version its API expects.
     "LLU_REGION": "us",
     "LLU_VERSION": "4.16.0"
