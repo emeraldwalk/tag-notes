@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError, setApiDeps } from './api';
 import { IMPORT_CHUNK, importBundle } from './backup';
 import { createHttpFoodStore } from './foods/store';
+import { createHttpInboxStore, listAllRawEntries } from './inbox/store';
 import { createHttpMedsStore } from './meds/store';
 import { DEFAULT_FOOD_TARGETS, getFoodTargets, setFoodTargets } from './foods/targets';
 import { createHttpNoteStore } from './notes/store';
@@ -141,11 +142,11 @@ describe('importBundle', () => {
     const notes = Array.from({ length: IMPORT_CHUNK + 5 }, (_, i) => ({ id: `n${i}`, rawText: `N${i}` }));
     const foods = [{ name: 'Oats', quantity: 1, protein: 5, calories: 150, carbs: 27, date: '2026-11-24' }];
     answers.push(
-      json({ notes: 200, foods: 0, targets: false, medicines: 0, doses: 0, skipped: 0 }),
-      json({ notes: 4, foods: 1, targets: true, medicines: 0, doses: 0, skipped: 1 }),
+      json({ notes: 200, foods: 0, targets: false, medicines: 0, doses: 0, rawEntries: 0, skipped: 0 }),
+      json({ notes: 4, foods: 1, targets: true, medicines: 0, doses: 0, rawEntries: 0, skipped: 1 }),
     );
-    const result = await importBundle({ notes, foods, foodTargets: { protein: 1, calories: 2 }, medicines: [], doses: [] });
-    expect(result).toEqual({ notes: 204, foods: 1, targets: true, medicines: 0, doses: 0, skipped: 1 });
+    const result = await importBundle({ notes, foods, foodTargets: { protein: 1, calories: 2 }, medicines: [], doses: [], rawEntries: [] });
+    expect(result).toEqual({ notes: 204, foods: 1, targets: true, medicines: 0, doses: 0, rawEntries: 0, skipped: 1 });
     expect(calls).toHaveLength(2);
     const [first, second] = calls.map((c) => c.body as Record<string, unknown[]>);
     expect(calls.every((c) => c.url === '/api/import' && c.method === 'POST')).toBe(true);
@@ -157,8 +158,8 @@ describe('importBundle', () => {
   });
 
   it('posts once for an empty file', async () => {
-    answers.push(json({ notes: 0, foods: 0, targets: false, medicines: 0, doses: 0, skipped: 0 }));
-    await importBundle({ notes: [], foods: [], medicines: [], doses: [] });
+    answers.push(json({ notes: 0, foods: 0, targets: false, medicines: 0, doses: 0, rawEntries: 0, skipped: 0 }));
+    await importBundle({ notes: [], foods: [], medicines: [], doses: [], rawEntries: [] });
     expect(calls).toHaveLength(1);
     expect(calls[0]!.body).toMatchObject({ notes: [] });
   });
@@ -168,10 +169,10 @@ describe('importBundle', () => {
     const dose = { medicineName: 'Metformin', takenAt: '2026-11-24T14:00:00.000Z', source: 'tap' as const };
     const notes = Array.from({ length: IMPORT_CHUNK - 1 }, (_, i) => ({ rawText: `N${i}` }));
     answers.push(
-      json({ notes: 199, foods: 0, targets: false, medicines: 1, doses: 0, skipped: 0 }),
-      json({ notes: 0, foods: 0, targets: false, medicines: 0, doses: 1, skipped: 0 }),
+      json({ notes: 199, foods: 0, targets: false, medicines: 1, doses: 0, rawEntries: 0, skipped: 0 }),
+      json({ notes: 0, foods: 0, targets: false, medicines: 0, doses: 1, rawEntries: 0, skipped: 0 }),
     );
-    const result = await importBundle({ notes, foods: [], medicines: [medicine], doses: [dose] });
+    const result = await importBundle({ notes, foods: [], medicines: [medicine], doses: [dose], rawEntries: [] });
     expect(result).toMatchObject({ notes: 199, medicines: 1, doses: 1 });
     const [first, second] = calls.map((c) => c.body as Record<string, unknown[]>);
     expect(first!['medicines']).toEqual([medicine]);
@@ -228,5 +229,69 @@ describe('HTTP meds store', () => {
   it('surfaces a duplicate name', async () => {
     answers.push(json({ error: 'duplicate_name' }, 409));
     await expect(store.createMedicine({ name: 'Metformin' })).rejects.toMatchObject({ status: 409, code: 'duplicate_name' });
+  });
+});
+
+describe('importBundle with raw entries', () => {
+  it('sends raw entries last and adds up their count', async () => {
+    const entry = { text: 'x', source: 'app', occurredAt: '2026-11-24T14:00:00.000Z', status: 'new' as const };
+    answers.push(json({ notes: 1, foods: 0, targets: false, medicines: 0, doses: 0, rawEntries: 1, skipped: 0 }));
+    const result = await importBundle({ notes: [{ rawText: 'N' }], foods: [], medicines: [], doses: [], rawEntries: [entry] });
+    expect(result).toMatchObject({ notes: 1, rawEntries: 1 });
+    expect(calls[0]!.body).toMatchObject({ notes: [{ rawText: 'N' }], rawEntries: [entry] });
+  });
+});
+
+describe('HTTP inbox store', () => {
+  const store = createHttpInboxStore();
+  const entry = { id: 'r/1', text: 'x', source: 'app', occurredAt: '2026-11-24T14:00:00.000Z', receivedAt: '2026-11-24T14:00:00.000Z', status: 'new', updatedAt: '2026-11-24T14:00:00.000Z' };
+  const token = { id: 't1', name: 'Siri', createdAt: '2026-11-24T14:00:00.000Z' };
+
+  it('uses the raw entry and token routes', async () => {
+    answers.push(
+      json({ entries: [entry] }),
+      json({ new: 3 }),
+      json({ entry }, 201),
+      json({ entry }),
+      json({ note: { id: 'n1' }, entry }, 201),
+      json({ error: 'not_found' }, 404),
+      json({ tokens: [token] }),
+      json({ token, secret: 'trk_x' }, 201),
+      new Response(null, { status: 204 }),
+    );
+    expect(await store.list('done', { after: entry, limit: 10 })).toEqual([entry]);
+    expect(await store.countNew()).toBe(3);
+    await store.create('hello');
+    await store.setStatus('r/1', 'dismissed');
+    expect(await store.makeNote('r/1')).toEqual({ noteId: 'n1', entry });
+    await store.remove('r/1'); // 404 is fine: already gone
+    expect(await store.listTokens()).toEqual([token]);
+    expect(await store.createToken('Siri')).toEqual({ token, secret: 'trk_x' });
+    await store.revokeToken('t1');
+
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+      'GET /api/raw-entries?status=done&before=2026-11-24T14%3A00%3A00.000Z&beforeId=r%2F1&limit=10',
+      'GET /api/raw-entries/count',
+      'POST /api/raw-entries',
+      'PUT /api/raw-entries/r%2F1',
+      'POST /api/raw-entries/r%2F1/note',
+      'DELETE /api/raw-entries/r%2F1',
+      'GET /api/ingest-tokens',
+      'POST /api/ingest-tokens',
+      'DELETE /api/ingest-tokens/t1',
+    ]);
+    expect(calls[2]!.body).toEqual({ text: 'hello' });
+    expect(calls[3]!.body).toEqual({ status: 'dismissed' });
+    expect(calls[7]!.body).toEqual({ name: 'Siri' });
+  });
+
+  it('lists every entry for Export All, paging after the last one', async () => {
+    const e = (id: string) => ({ ...entry, id });
+    answers.push(json({ entries: [e('a'), e('b')] }), json({ entries: [e('c')] }));
+    expect((await listAllRawEntries(store, 2)).map((x) => x.id)).toEqual(['a', 'b', 'c']);
+    expect(calls.map((c) => c.url)).toEqual([
+      '/api/raw-entries?status=all&limit=2',
+      '/api/raw-entries?status=all&before=2026-11-24T14%3A00%3A00.000Z&beforeId=b&limit=2',
+    ]);
   });
 });

@@ -3,6 +3,7 @@ import type { JSX } from 'solid-js'
 import BottomNav from './components/BottomNav'
 import Food from './routes/Food'
 import FoodHistory from './routes/FoodHistory'
+import Inbox from './routes/Inbox'
 import Meds from './routes/Meds'
 import MedsHistory from './routes/MedsHistory'
 import NoteCreate from './routes/NoteCreate'
@@ -24,6 +25,8 @@ function App() {
   return (
     <Router root={Shell} base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Route path="/" component={() => <Navigate href="/notes" />} />
+      <Route path="/inbox" component={() => <Inbox view="new" />} />
+      <Route path="/inbox/filed" component={() => <Inbox view="filed" />} />
       <Route path="/notes" component={NoteCreate} />
       <Route path="/notes/history" component={NoteHistory} />
       <Route path="/notes/:id" component={NoteEditor} />

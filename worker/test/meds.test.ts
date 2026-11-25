@@ -313,11 +313,11 @@ describe('export / import of medicines and doses', () => {
     // Into a fresh account.
     const fresh = await signIn(h, new Jar(), 'sub-fresh');
     const res = await sendJson(h, fresh, 'POST', '/api/import', file);
-    expect(await res.json()).toEqual({ notes: 0, foods: 0, targets: false, medicines: 0, doses: 0, skipped: 4 });
+    expect(await res.json()).toEqual({ notes: 0, foods: 0, targets: false, medicines: 0, doses: 0, rawEntries: 0, skipped: 4 });
     // The ids are the owner's, so they're skipped; a copy without ids imports.
     const strip = <T extends Row>(rows: T[]) => rows.map(({ id: _id, ...rest }) => rest);
     const copy = { ...file, medicines: strip(file.medicines), doses: strip(file.doses) };
-    expect(await (await sendJson(h, fresh, 'POST', '/api/import', copy)).json()).toMatchObject({ medicines: 2, doses: 2, skipped: 0 });
+    expect(await (await sendJson(h, fresh, 'POST', '/api/import', copy)).json()).toMatchObject({ medicines: 2, doses: 2, rawEntries: 0, skipped: 0 });
     const freshMeds = await medicines(fresh);
     expect(freshMeds.map((m) => [m['name'], m['active'], m['defaultDose']])).toEqual([['Metformin', true, '500 mg'], ['Vitamin D', false, undefined]]);
     const freshDoses = await doses(fresh);
@@ -327,7 +327,7 @@ describe('export / import of medicines and doses', () => {
     expect(freshDoses[1]).not.toHaveProperty('medicineId');
 
     // Back into the owner's account: upserts by id, nothing duplicated.
-    expect(await (await sendJson(h, jar, 'POST', '/api/import', file)).json()).toMatchObject({ medicines: 2, doses: 2, skipped: 0 });
+    expect(await (await sendJson(h, jar, 'POST', '/api/import', file)).json()).toMatchObject({ medicines: 2, doses: 2, rawEntries: 0, skipped: 0 });
     expect(await medicines(jar)).toEqual(file.medicines);
     expect(await doses(jar)).toEqual(file.doses);
   });
@@ -340,7 +340,7 @@ describe('export / import of medicines and doses', () => {
       medicines: [{ id: 'm-file', name: 'METFORMIN', active: true, sortOrder: 0 }, { name: 'metformin', active: true, sortOrder: 0 }],
       doses: [{ id: 'd-file', medicineId: 'm-file', medicineName: 'Metformin', takenAt: '2026-11-24T14:00:00Z', source: 'tap' }],
     };
-    expect(await (await sendJson(h, jar, 'POST', '/api/import', file)).json()).toMatchObject({ medicines: 2, doses: 1, skipped: 0 });
+    expect(await (await sendJson(h, jar, 'POST', '/api/import', file)).json()).toMatchObject({ medicines: 2, doses: 1, rawEntries: 0, skipped: 0 });
     expect((await medicines(jar)).map((m) => m.id)).toEqual([met.id]);
     expect((await doses(jar))[0]).toMatchObject({ id: 'd-file', medicineId: met.id });
   });

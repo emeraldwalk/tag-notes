@@ -49,6 +49,7 @@ const MESSAGES: Record<string, string> = {
   not_found: 'Not found. It may have been deleted.',
   too_large: 'That is too large to save.',
   duplicate_name: 'There is already a medicine with that name.',
+  already_filed: 'That entry was already made into something.',
 };
 
 /** Calls `/api<path>`; JSON in and out. Resolves `undefined` for 204. */

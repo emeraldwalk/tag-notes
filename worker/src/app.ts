@@ -5,6 +5,7 @@ import { foodsApi } from './foods';
 import { glucoseApi, glucoseIngest } from './glucoseRoutes';
 import { jsonError, withCookie } from './http';
 import { importApi } from './import';
+import { inboxApi, textIngest } from './inbox';
 import { medsApi } from './meds';
 import { notesApi } from './notes';
 
@@ -20,7 +21,7 @@ export interface AppDeps {
   /** Short commit of this build, or "dev". */
   commit: string;
   db: D1Database;
-  /** Home Assistant's bearer token for `/api/ingest/*`; unset refuses every push. */
+  /** Home Assistant's bearer token for `POST /api/ingest/glucose`; unset refuses every glucose push. */
   haToken: string | undefined;
   /** The IdP sub that pushed and polled readings belong to (the cron and HA have no session). */
   ownerUserId: string;
@@ -49,8 +50,10 @@ export type AppEnv = { Variables: { session: AppSession } };
 export function createApp(deps: AppDeps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.route('/', authRoutes(deps.auth));
-  // Pushes from Home Assistant: a bearer token instead of a session, so mounted before the session middleware.
+  // Pushes with a bearer token instead of a session, so mounted before the session middleware: glucose from Home
+  // Assistant (HA_INGEST_TOKEN, plan 14), and text from capture sources (ingest tokens in D1, plan 9).
   app.route('/api/ingest', glucoseIngest(deps));
+  app.route('/api/ingest', textIngest(deps.db));
 
   const api = new Hono<AppEnv>();
   api.use('*', async (c, next) => {
@@ -68,6 +71,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   api.route('/', notesApi(deps.db));
   api.route('/', foodsApi(deps.db));
   api.route('/', medsApi(deps.db));
+  api.route('/', inboxApi(deps.db));
   api.route('/import', importApi(deps.db, deps.timeZone ?? 'America/Chicago'));
   api.all('*', () => jsonError(404, 'not_found'));
   app.route('/api', api);

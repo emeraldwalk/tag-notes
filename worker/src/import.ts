@@ -18,6 +18,7 @@ export interface ImportResult {
   targets: boolean;
   medicines: number;
   doses: number;
+  rawEntries: number;
   /** Rows whose id is another user's: left alone. */
   skipped: number;
 }
@@ -56,7 +57,7 @@ async function runGroups(db: D1Database, groups: D1PreparedStatement[][]): Promi
 
 /**
  * `POST /api/import`: plan 6's export file (v2, v1 or a bare array of notes), upserted by id for this user, in the
- * order notes, foods, targets, medicines, doses (plan 16).
+ * order notes, foods, targets, medicines, doses (plan 16), raw entries (plan 9).
  */
 export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -79,6 +80,8 @@ export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
     if (badMedicine >= 0) return invalid(`Medicine at index ${badMedicine} has an invalid "id".`);
     const badDose = bundle.doses.findIndex((d) => badId(d.id) || badId(d.medicineId));
     if (badDose >= 0) return invalid(`Dose at index ${badDose} has an invalid "id" or "medicineId".`);
+    const badEntry = bundle.rawEntries.findIndex((e) => badId(e.id) || badId(e.outcomeId));
+    if (badEntry >= 0) return invalid(`Raw entry at index ${badEntry} has an invalid "id" or "outcomeId".`);
 
     const sub = c.var.session.sub;
     const now = new Date().toISOString();
@@ -177,17 +180,40 @@ export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
     ]);
     const doseResults = await runGroups(db, doseGroups);
 
+    // Raw entries (plan 9): restored as they were; the token that posted one isn't in the file, so a new row has none
+    // and an existing row keeps its own.
+    const entryGroups = bundle.rawEntries.map((e) => {
+      const occurredAt = toIso(e.occurredAt)!;
+      return [
+        db
+          .prepare(
+            `INSERT INTO raw_entries (id, user_id, text, source, token_id, occurred_at, received_at, status, outcome_kind, outcome_id, updated_at)
+             VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT (id) DO UPDATE SET text = excluded.text, source = excluded.source, occurred_at = excluded.occurred_at,
+               received_at = excluded.received_at, status = excluded.status, outcome_kind = excluded.outcome_kind,
+               outcome_id = excluded.outcome_id, updated_at = excluded.updated_at
+             WHERE raw_entries.user_id = excluded.user_id`,
+          )
+          .bind(e.id ?? crypto.randomUUID(), sub, e.text, e.source, occurredAt, toIso(e.receivedAt) ?? occurredAt, e.status,
+            e.outcomeKind ?? null, e.outcomeId ?? null, toIso(e.updatedAt) ?? now),
+      ];
+    });
+    const entryResults = await runGroups(db, entryGroups);
+
     const notes = noteResults.filter((r) => r.meta.changes > 0).length;
     const foods = foodResults.filter((r) => r.meta.changes > 0).length;
     const medicinesSaved = medicineResults.filter((r) => r.meta.changes > 0).length;
     const doses = doseResults.filter((r) => r.meta.changes > 0).length;
+    const rawEntries = entryResults.filter((r) => r.meta.changes > 0).length;
     const result: ImportResult = {
       notes,
       foods,
       targets: Boolean(bundle.foodTargets),
       medicines: medicinesSaved + mergedMedicines,
       doses,
-      skipped: noteResults.length - notes + (foodResults.length - foods) + (medicineResults.length - medicinesSaved) + (doseResults.length - doses),
+      rawEntries,
+      skipped: noteResults.length - notes + (foodResults.length - foods) + (medicineResults.length - medicinesSaved) + (doseResults.length - doses)
+        + (entryResults.length - rawEntries),
     };
     return c.json(result, 200, { 'Cache-Control': 'no-store' });
   });

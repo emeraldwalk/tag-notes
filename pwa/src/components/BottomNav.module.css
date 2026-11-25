@@ -33,3 +33,29 @@
   width: 24px;
   height: 24px;
 }
+
+/* The icon and the count share one grid cell; the count sits at the icon's top right. */
+.iconWrap {
+  display: grid;
+  justify-items: center;
+}
+
+.iconWrap > * {
+  grid-area: 1 / 1;
+}
+
+.badge {
+  justify-self: start;
+  align-self: start;
+  margin: -4px 0 0 16px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}

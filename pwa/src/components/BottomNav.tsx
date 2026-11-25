@@ -1,4 +1,6 @@
 import { A, useLocation } from '@solidjs/router'
+import { onCleanup, onMount, Show } from 'solid-js'
+import { inboxCount, refreshInboxCount } from '../lib/inbox/count'
 import styles from './BottomNav.module.css'
 
 function BottomNav() {
@@ -6,8 +8,45 @@ function BottomNav() {
 
   const isNotesActive = () => location.pathname.startsWith('/notes')
 
+  // The Inbox count: on start, and whenever the app comes back to the foreground (Siri may have added entries).
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') void refreshInboxCount()
+  }
+  onMount(() => {
+    void refreshInboxCount()
+    document.addEventListener('visibilitychange', onVisible)
+  })
+  onCleanup(() => document.removeEventListener('visibilitychange', onVisible))
+
   return (
     <nav class={styles.nav}>
+      <A
+        href="/inbox"
+        class={styles.link}
+        classList={{ [styles.active]: location.pathname.startsWith('/inbox') }}
+      >
+        <span class={styles.iconWrap}>
+          <svg
+            class={styles.icon}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+          </svg>
+          <Show when={inboxCount() > 0}>
+            <span class={styles.badge} aria-label={`${inboxCount()} new`}>
+              {inboxCount() > 99 ? '99+' : inboxCount()}
+            </span>
+          </Show>
+        </span>
+        <span>Inbox</span>
+      </A>
       <A
         href="/notes"
         class={styles.link}

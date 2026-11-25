@@ -1,13 +1,13 @@
 # 9 — Raw entries + ingest
 
-- [ ] Migration `0004_raw_entries.sql`
-- [ ] Ingest tokens: API + Settings → Capture sources (create, show once, revoke)
-- [ ] `POST /api/ingest/text` (bearer token, no session)
-- [ ] Raw entries API (list, add from the app, make note, mark done / dismiss, delete)
-- [ ] Inbox tab: capture box, new entries, actions, done / dismissed list
-- [ ] Export All / import carry `rawEntries`
-- [ ] README: Siri Shortcut (phone and watch) and `curl` example
-- [ ] Tests
+- [x] Migration `0004_raw_entries.sql`
+- [x] Ingest tokens: API + Settings → Capture sources (create, show once, revoke)
+- [x] `POST /api/ingest/text` (bearer token, no session)
+- [x] Raw entries API (list, add from the app, make note, mark done / dismiss, delete)
+- [x] Inbox tab: capture box, new entries, actions, done / dismissed list
+- [x] Export All / import carry `rawEntries`
+- [x] README: Siri Shortcut (phone and watch) and `curl` example
+- [x] Tests
 - [ ] Owner: push, create a "Siri" token, build the Shortcut, live checks
 
 ## Goal
@@ -44,9 +44,9 @@ CREATE TABLE ingest_tokens (
   token_hash   TEXT NOT NULL UNIQUE,   -- hex SHA-256 of the full token; the token itself is never stored
   created_at   TEXT NOT NULL,
   last_used_at TEXT,
-  revoked_at   TEXT,
-  UNIQUE (user_id, name)
+  revoked_at   TEXT
 );
+CREATE UNIQUE INDEX ingest_tokens_active_name ON ingest_tokens (user_id, lower(name)) WHERE revoked_at IS NULL;
 
 CREATE TABLE raw_entries (
   id           TEXT PRIMARY KEY,
@@ -92,7 +92,7 @@ CREATE INDEX raw_entries_by_status ON raw_entries (user_id, status, occurred_at)
 | `GET /api/ingest-tokens` | | `{ tokens: [ { id, name, createdAt, lastUsedAt?, revokedAt? } ] }`, newest first; never the hash |
 | `POST /api/ingest-tokens` | `{ name }` (1–40 chars, trimmed) | `201 { token: {…as above}, secret: "trk_…" }`; `409 duplicate_name` |
 | `DELETE /api/ingest-tokens/:id` | | `204`; sets `revoked_at` (the row stays so entries keep their source) |
-| `GET /api/raw-entries` | `?status=new\|done\|dismissed\|all` (default `new`), `&before=<iso>`, `&limit=` (default 50, max 200) | `{ entries }` newest `occurredAt` first, before `before` if given |
+| `GET /api/raw-entries` | `?status=new\|done\|dismissed\|all` (default `new`), `&before=<iso>`, `&beforeId=` (with `before`), `&limit=` (default 50, max 200) | `{ entries }` newest `occurredAt` first, then by id descending; before `before`, or after the entry (`before`, `beforeId`) when both given |
 | `GET /api/raw-entries/count` | | `{ new: number }` |
 | `POST /api/raw-entries` | `{ text, occurredAt? }` | `201 { entry }`; `source 'app'` |
 | `PUT /api/raw-entries/:id` | `{ status: 'new'\|'done'\|'dismissed' }` | `{ entry }`; `text` cannot be changed |
@@ -163,6 +163,26 @@ import round trip of `rawEntries`.
 4. Mark one Done and one Dismissed; both move to "Done and dismissed"; move one back.
 5. Revoke the token; the Shortcut gets 401. Create a new one and update the Shortcut.
 6. `wrangler tail` while posting: CPU per `POST /api/ingest/text` well under 10 ms.
+
+## Implementation notes (2026-11-25)
+
+- **Token names** are unique among a user's *active* tokens, ignoring case (a partial unique index), so a revoked
+  "Siri" can be replaced by a new "Siri". Revoking keeps the row (entries keep their source name).
+- **Paging:** `GET /api/raw-entries` orders by `occurredAt` then id (both descending) and takes an optional
+  `beforeId` with `before`, so a page continues exactly after an entry even when several share its time. Export All
+  pages through `status=all` 200 at a time this way (`listAllRawEntries`), so nothing is skipped.
+- **Make note** claims the entry (only while it has no outcome) and writes the note in one batch, the note only if
+  the claim held: two taps make one note. An entry moved back to the Inbox keeps its outcome, so it can't make a
+  second note (it offers Done / Dismiss only).
+- **Screens:** the "Done and dismissed" view is `/inbox/filed` (NavBar "Filed" from the Inbox). It lists
+  `status=all` without the new ones. Delete asks with `confirm()`. The Inbox tab's count is a shared signal
+  (`lib/inbox/count.ts`), refreshed on start, on `visibilitychange` and after Inbox actions.
+- **Import** runs raw entries last, chunked with the other rows (25 per request). A restored entry has no
+  `token_id`; an existing one keeps its own.
+- Types: `pwa/src/lib/inbox/types.ts`; file validation `parseRawEntry` in `export.ts`. Worker routes in
+  `worker/src/inbox.ts` (`textIngest`, `inboxApi`).
+- Checked in a headless browser against a mock API (390×844): typing an entry, Note, Dismiss, the badge count, the
+  Filed view and Move back, and Settings → Capture sources (secret shown once, duplicate name message).
 
 ## Owner steps
 

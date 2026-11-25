@@ -9,6 +9,7 @@ import {
 } from './export';
 import type { FoodTargets } from './foods/targets';
 import type { FoodEntry } from './foods/types';
+import type { RawEntry } from './inbox/types';
 import type { Dose, Medicine } from './meds/types';
 import type { Note } from './notes/types';
 
@@ -116,6 +117,47 @@ describe('medicines and doses in the file (plan 16)', () => {
   });
 });
 
+describe('raw entries in the file (plan 9)', () => {
+  const entry: RawEntry = {
+    id: 'r1',
+    text: 'I had two eggs',
+    source: 'Siri',
+    occurredAt: '2026-11-24T14:00:00.000Z',
+    receivedAt: '2026-11-24T14:00:01.000Z',
+    status: 'done',
+    outcomeKind: 'note',
+    outcomeId: 'n1',
+    updatedAt: '2026-11-24T15:00:00.000Z',
+  };
+
+  it('round-trips through buildExportFile and parseExportFile', () => {
+    const file = buildExportFile({ notes: [], foods: [], foodTargets, rawEntries: [entry] });
+    expect(parseExportFile(JSON.stringify(file)).rawEntries).toEqual([entry]);
+    expect(buildExportFile({ notes: [], foods: [], foodTargets }).rawEntries).toEqual([]);
+  });
+
+  it('is optional, defaults status to new, and drops an outcome without an id', () => {
+    expect(parseExportFile(v2Json({ rawEntries: undefined })).rawEntries).toEqual([]);
+    const [parsed] = parseExportFile(v2Json({ rawEntries: [{ text: 'x', source: 'app', occurredAt: '2026-11-24T14:00:00Z', outcomeKind: 'note' }] })).rawEntries;
+    expect(parsed).toMatchObject({ text: 'x', status: 'new' });
+    expect(parsed).not.toHaveProperty('outcomeKind');
+  });
+
+  it.each([
+    ['text', { text: '  ' }],
+    ['text', { text: 'x'.repeat(4001) }],
+    ['source', { source: '' }],
+    ['occurredAt', { occurredAt: '2026-11-24 14:00' }],
+    ['receivedAt', { receivedAt: 'later' }],
+    ['status', { status: 'filed' }],
+    ['outcomeKind', { outcomeKind: 'food' }],
+  ])('rejects a bad %s with the entry index', (field, patch) => {
+    expect(() => parseExportFile(v2Json({ rawEntries: [entry, { ...entry, ...patch }] }))).toThrow(
+      new InvalidExportFileError(`Raw entry at index 1 has an invalid "${field}" (${field === 'text' ? 'expected 1–4000 characters' : field === 'source' ? 'expected 1–40 characters' : field === 'status' ? 'expected one of new, done, dismissed' : field === 'outcomeKind' ? 'expected "note"' : 'expected an ISO 8601 time with a zone'}).`),
+    );
+  });
+});
+
 describe('exportFileName', () => {
   it('includes the date in YYYY-MM-DD form', () => {
     expect(exportFileName(new Date('2026-06-12T15:30:00.000Z'))).toBe(
@@ -151,7 +193,7 @@ describe('parseExportFile', () => {
   it('parses a bare array of notes', () => {
     const bundle = parseExportFile(JSON.stringify([note]));
 
-    expect(bundle).toEqual({ notes: [importedNote], foods: [], medicines: [], doses: [] });
+    expect(bundle).toEqual({ notes: [importedNote], foods: [], medicines: [], doses: [], rawEntries: [] });
     expect(bundle.foodTargets).toBeUndefined();
   });
 

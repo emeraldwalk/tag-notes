@@ -6,7 +6,7 @@ import { clearData, Jar, send, sendJson, signIn, useHarness } from './harness';
 const h = useHarness();
 beforeEach(clearData);
 
-type Result = { notes: number; foods: number; targets: boolean; medicines: number; doses: number; skipped: number };
+type Result = { notes: number; foods: number; targets: boolean; medicines: number; doses: number; rawEntries: number; skipped: number };
 const doImport = async (jar: Jar, file: unknown) => {
   const res = await sendJson(h, jar, 'POST', '/api/import', file);
   expect(res.status).toBe(200);
@@ -40,7 +40,7 @@ const v2 = {
 describe('POST /api/import', () => {
   it('imports a v2 file: notes, foods (with the eatenAt rule) and targets', async () => {
     const jar = await signIn(h, new Jar());
-    expect(await doImport(jar, v2)).toEqual({ notes: 2, foods: 4, targets: true, medicines: 0, doses: 0, skipped: 0 });
+    expect(await doImport(jar, v2)).toEqual({ notes: 2, foods: 4, targets: true, medicines: 0, doses: 0, rawEntries: 0, skipped: 0 });
 
     const all = await notes(jar);
     const old = all.find((n) => n['id'] === 'n-1')!;
@@ -67,8 +67,8 @@ describe('POST /api/import', () => {
 
   it('imports a v1 file and a bare array of notes', async () => {
     const jar = await signIn(h, new Jar());
-    expect(await doImport(jar, { app: 'tag-notes', version: 1, notes: [{ id: 'v1', rawText: 'V1\n\n:a' }] })).toEqual({ notes: 1, foods: 0, targets: false, medicines: 0, doses: 0, skipped: 0 });
-    expect(await doImport(jar, [{ id: 'bare', rawText: 'Bare\n\n:b' }])).toEqual({ notes: 1, foods: 0, targets: false, medicines: 0, doses: 0, skipped: 0 });
+    expect(await doImport(jar, { app: 'tag-notes', version: 1, notes: [{ id: 'v1', rawText: 'V1\n\n:a' }] })).toEqual({ notes: 1, foods: 0, targets: false, medicines: 0, doses: 0, rawEntries: 0, skipped: 0 });
+    expect(await doImport(jar, [{ id: 'bare', rawText: 'Bare\n\n:b' }])).toEqual({ notes: 1, foods: 0, targets: false, medicines: 0, doses: 0, rawEntries: 0, skipped: 0 });
     expect((await notes(jar)).map((n) => n['id']).sort()).toEqual(['bare', 'v1']);
     expect(await (await send(h, jar, '/api/food-targets')).json()).toEqual({ targets: null });
   });
@@ -93,7 +93,7 @@ describe('POST /api/import', () => {
       foods: [{ ...v2.foods[0], name: 'Hijacked' }],
       foodTargets: { protein: 1, calories: 1 },
     };
-    expect(await doImport(other, hijack)).toEqual({ notes: 1, foods: 0, targets: true, medicines: 0, doses: 0, skipped: 2 });
+    expect(await doImport(other, hijack)).toEqual({ notes: 1, foods: 0, targets: true, medicines: 0, doses: 0, rawEntries: 0, skipped: 2 });
 
     expect((await notes(owner)).find((n) => n['id'] === 'n-1')).toMatchObject({ title: 'Old note', tags: ['meds'] });
     expect((await notes(owner, '?tag=evil'))).toEqual([]);

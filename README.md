@@ -96,6 +96,48 @@ If LibreView refuses the Worker (the page shows `http_403` or similar), switch t
 
 The cron uses one of the account's 5 free-plan cron triggers. Measured CPU per run (2026-11-25): 4–9 ms of the 10 ms allowed.
 
+### Capture (plan 9)
+
+Anything said or typed to Tracker is kept word for word in the **Inbox** (the first tab) before anything interprets
+it. Each capture source posts with its own token, made in Settings → Capture sources. A token is shown once, only its
+hash is stored, and revoking it stops it working. Entries show the source's name.
+
+```
+POST https://tracker.ingles.place/api/ingest/text
+Authorization: Bearer trk_…
+Content-Type: application/json
+
+{ "text": "I had two eggs and toast", "occurredAt": "2026-11-25T08:30:00-06:00" }
+```
+
+`occurredAt` is optional (default: when the Worker gets it). The answer is `201 { "id": …, "saved": "Saved: …" }`;
+`401` means a missing, unknown or revoked token.
+
+**Siri Shortcut (iPhone and Apple Watch).** In Shortcuts, a new shortcut named **Tracker** (so "Hey Siri, Tracker"
+runs it), with these actions:
+
+1. **Dictate Text**: Stop Listening *After Pause*.
+2. **Get Contents of URL**: URL `https://tracker.ingles.place/api/ingest/text`; Method **POST**; Headers:
+   `Authorization` = `Bearer trk_…` (the token from Settings, after the word Bearer and a space); Request Body
+   **JSON** with one field, `text` (Text) = *Dictated Text*.
+3. **Get Dictionary Value**: Get *Value* for `saved` in *Contents of URL*.
+4. **Show Result**: *Dictionary Value* (Siri reads it out: "Saved: …").
+
+In the shortcut's details, turn on **Show on Apple Watch**. On the watch, raise to speak or "Hey Siri, Tracker", then
+say the entry.
+
+To test from a terminal, keep the token in a variable rather than in the command:
+
+```
+read -rs TRACKER_TOKEN && export TRACKER_TOKEN
+curl -sS https://tracker.ingles.place/api/ingest/text \
+  -H "Authorization: Bearer $TRACKER_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"text":"test from curl"}'
+```
+
+Home Assistant's kitchen voice (plan 12) will post the same way with its own token ("Kitchen"). The glucose push
+(`POST /api/ingest/glucose`, `HA_INGEST_TOKEN`) is separate and unchanged.
+
 Sessions last 30 days without use and 30 days at most; signing in again is silent while the IdP session lasts.
 
 To read CPU time per request (the free plan allows 10 ms), run in your own terminal while making requests:

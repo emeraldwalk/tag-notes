@@ -2,6 +2,8 @@ import { api } from './api';
 import { buildExportFile, EXPORT_FORMAT, EXPORT_VERSION, type ExportFileV2, type ImportBundle } from './export';
 import { foodStore } from './foods/store-instance';
 import { getFoodTargets } from './foods/targets';
+import { listAllRawEntries } from './inbox/store';
+import { inboxStore } from './inbox/store-instance';
 import { medsStore } from './meds/store-instance';
 import { noteStore } from './notes/store-instance';
 
@@ -11,14 +13,15 @@ import { noteStore } from './notes/store-instance';
  */
 
 export async function exportAll(): Promise<ExportFileV2> {
-  const [notes, foods, foodTargets, medicines, doses] = await Promise.all([
+  const [notes, foods, foodTargets, medicines, doses, rawEntries] = await Promise.all([
     noteStore.list(),
     foodStore.list(),
     getFoodTargets(),
     medsStore.listMedicines(),
     medsStore.listDoses(),
+    listAllRawEntries(inboxStore),
   ]);
-  return buildExportFile({ notes, foods, foodTargets, medicines, doses });
+  return buildExportFile({ notes, foods, foodTargets, medicines, doses, rawEntries });
 }
 
 export interface ImportResult {
@@ -27,11 +30,12 @@ export interface ImportResult {
   targets: boolean;
   medicines: number;
   doses: number;
+  rawEntries: number;
   /** Rows whose id belongs to another user: never overwritten. */
   skipped: number;
 }
 
-/** Rows (notes, foods, medicines, doses) per request, so each import request stays well inside the Worker's 10 ms of CPU. */
+/** Rows (notes, foods, medicines, doses, raw entries) per request, so each import request stays well inside the Worker's 10 ms of CPU. */
 export const IMPORT_CHUNK = 25; // measured in production (2026-11-25): 200 rows 16 ms; 50 notes 10 ms, 50 mixed 6 ms
 
 /**
@@ -40,13 +44,14 @@ export const IMPORT_CHUNK = 25; // measured in production (2026-11-25): 200 rows
  * already validated by `parseExportFile`; the server validates again.
  */
 export async function importBundle(bundle: ImportBundle): Promise<ImportResult> {
-  const total: ImportResult = { notes: 0, foods: 0, targets: false, medicines: 0, doses: 0, skipped: 0 };
+  const total: ImportResult = { notes: 0, foods: 0, targets: false, medicines: 0, doses: 0, rawEntries: 0, skipped: 0 };
   // In this order, so medicines are saved before (or with) the doses that link to them.
   const rows = [
     ...bundle.notes.map((row) => ({ kind: 'notes' as const, row })),
     ...bundle.foods.map((row) => ({ kind: 'foods' as const, row })),
     ...bundle.medicines.map((row) => ({ kind: 'medicines' as const, row })),
     ...bundle.doses.map((row) => ({ kind: 'doses' as const, row })),
+    ...bundle.rawEntries.map((row) => ({ kind: 'rawEntries' as const, row })),
   ];
   const chunks = Math.max(1, Math.ceil(rows.length / IMPORT_CHUNK));
   for (let i = 0; i < chunks; i++) {
@@ -64,6 +69,7 @@ export async function importBundle(bundle: ImportBundle): Promise<ImportResult> 
     total.targets ||= result.targets;
     total.medicines += result.medicines;
     total.doses += result.doses;
+    total.rawEntries += result.rawEntries;
     total.skipped += result.skipped;
   }
   return total;

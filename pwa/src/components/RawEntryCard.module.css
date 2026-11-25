@@ -1,0 +1,64 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.7rem 0.75rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+}
+
+.filed .text {
+  color: #3a3a3c;
+}
+
+.text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #8e8e93;
+}
+
+.outcome {
+  margin-left: 0.3rem;
+  color: #007aff;
+  text-decoration: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.action,
+.delete {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 6px;
+  background: #e9e9ee;
+}
+
+.action {
+  color: #007aff;
+}
+
+.delete {
+  margin-left: auto;
+  color: #ff3b30;
+}
+
+.action:disabled,
+.delete:disabled {
+  color: #c7c7cc;
+}

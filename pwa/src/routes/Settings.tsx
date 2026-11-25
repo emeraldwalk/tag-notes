@@ -1,5 +1,6 @@
 import { createSignal, onMount, Show } from 'solid-js';
 import AccountSection from '../components/AccountSection';
+import CaptureSourcesSection from '../components/CaptureSourcesSection';
 import ConvertMedsSection from '../components/ConvertMedsSection';
 import GlucoseSection from '../components/GlucoseSection';
 import MedicinesSection from '../components/MedicinesSection';
@@ -81,7 +82,7 @@ function Settings() {
       showError(err);
       return;
     }
-    const { notes, foods, doses } = file;
+    const { notes, foods, doses, rawEntries } = file;
     const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
@@ -93,7 +94,7 @@ function Settings() {
 
     setStatus({
       kind: 'success',
-      message: `Exported ${noteCountText(notes.length)}, ${foodCountText(foods.length)}, ${doses.length} medicine doses and food targets.`,
+      message: `Exported ${noteCountText(notes.length)}, ${foodCountText(foods.length)}, ${doses.length} medicine doses, ${rawEntries.length} inbox entries and food targets.`,
     });
   };
 
@@ -117,7 +118,8 @@ function Settings() {
       setConvertVersion((v) => v + 1);
       await refreshCount();
       const meds = result.medicines + result.doses > 0 ? `, ${result.medicines} medicines, ${result.doses} doses` : '';
-      const counts = `${noteCountText(result.notes)}, ${foodCountText(result.foods)}${meds}`;
+      const inbox = result.rawEntries > 0 ? `, ${result.rawEntries} inbox entries` : '';
+      const counts = `${noteCountText(result.notes)}, ${foodCountText(result.foods)}${meds}${inbox}`;
       const skipped = result.skipped > 0 ? ` Skipped ${result.skipped} that belong to another account.` : '';
       setStatus({
         kind: 'success',
@@ -178,6 +180,11 @@ function Settings() {
       />
 
       <section class={styles.section}>
+        <h2 class={styles.sectionTitle}>Capture sources</h2>
+        <CaptureSourcesSection />
+      </section>
+
+      <section class={styles.section}>
         <h2 class={styles.sectionTitle}>Data</h2>
         <p class={styles.noteCount}>
           {noteCountText(noteCount())} and {foodCountText(foodCount())} stored
@@ -219,8 +226,8 @@ function Settings() {
         </Show>
 
         <p class={styles.hint}>
-          Export All saves notes, food entries, food targets, medicines and
-          doses in one file.
+          Export All saves notes, food entries, food targets, medicines,
+          doses and inbox entries in one file.
           Importing a file (from this app or the old Tag Notes app) merges it
           into your account: entries whose id matches an existing one replace
           it, others are added. Food targets in the file replace the current

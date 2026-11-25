@@ -1,0 +1,130 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  font-size: 0.8rem;
+  color: #8e8e93;
+}
+
+.revoked .name {
+  color: #8e8e93;
+  text-decoration: line-through;
+}
+
+.revoke,
+.button {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 6px;
+  background: #f2f2f7;
+}
+
+.revoke {
+  color: #ff3b30;
+}
+
+.button {
+  color: #007aff;
+}
+
+.revoke:disabled,
+.button:disabled {
+  color: #c7c7cc;
+}
+
+.secretBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #fffbe6;
+  border: 1px solid #f0d77a;
+  border-radius: 8px;
+}
+
+.secretTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.secret {
+  padding: 0.5rem;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.secretActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.warning {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #8a6d00;
+}
+
+.addForm {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.input {
+  width: 100%;
+  padding: 0.5rem 0.8rem;
+  font-size: 1rem;
+  border: 1px solid #d1d1d6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #ff3b30;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #8e8e93;
+}

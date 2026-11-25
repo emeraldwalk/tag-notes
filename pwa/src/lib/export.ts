@@ -1,6 +1,7 @@
 // Shared with the Worker (worker/src/import.ts and foods.ts validate with these): keep this file free of browser APIs
 // and of imports other than types.
 import type { FoodEntry, FoodTargets, ImportableFoodEntry } from './foods/types';
+import type { ImportableRawEntry, RawEntry, RawEntryStatus } from './inbox/types';
 import type { Dose, DoseSource, ImportableDose, ImportableMedicine, Medicine } from './meds/types';
 import type { ImportableNote, Note } from './notes/types';
 
@@ -17,6 +18,7 @@ export interface ExportFileV2 {
   foodTargets: FoodTargets;
   medicines: Medicine[]; // plan 16; absent in older files
   doses: Dose[];
+  rawEntries: RawEntry[]; // plan 9; absent in older files
 }
 
 export interface ImportBundle {
@@ -25,6 +27,7 @@ export interface ImportBundle {
   foodTargets?: FoodTargets; // absent for v1 files and bare arrays
   medicines: ImportableMedicine[]; // [] when the file has none
   doses: ImportableDose[];
+  rawEntries: ImportableRawEntry[];
 }
 
 export class InvalidExportFileError extends Error {
@@ -40,6 +43,7 @@ export function buildExportFile(data: {
   foodTargets: FoodTargets;
   medicines?: Medicine[];
   doses?: Dose[];
+  rawEntries?: RawEntry[];
 }): ExportFileV2 {
   return {
     app: EXPORT_FORMAT,
@@ -50,6 +54,7 @@ export function buildExportFile(data: {
     foodTargets: data.foodTargets,
     medicines: data.medicines ?? [],
     doses: data.doses ?? [],
+    rawEntries: data.rawEntries ?? [],
   };
 }
 
@@ -243,6 +248,54 @@ export function parseDose(entry: unknown, what: string): ImportableDose {
   return result;
 }
 
+/** Longest raw entry text (plan 9), and longest capture source name kept on an entry. */
+export const MAX_RAW_ENTRY_TEXT = 4000;
+const MAX_RAW_ENTRY_SOURCE = 40;
+const RAW_ENTRY_STATUSES: readonly RawEntryStatus[] = ['new', 'done', 'dismissed'];
+
+/** Validates one raw entry from a file. */
+export function parseRawEntry(entry: unknown, what: string): ImportableRawEntry {
+  const invalid = (field: string, rule: string) =>
+    new InvalidExportFileError(`${what} has an invalid "${field}" (${rule}).`);
+  if (!isRecord(entry)) throw new InvalidExportFileError(`${what} is not an object.`);
+
+  const text = entry['text'];
+  if (typeof text !== 'string' || text.trim() === '' || text.length > MAX_RAW_ENTRY_TEXT) {
+    throw invalid('text', `expected 1–${MAX_RAW_ENTRY_TEXT} characters`);
+  }
+  const source = entry['source'];
+  if (typeof source !== 'string' || source.trim() === '' || source.length > MAX_RAW_ENTRY_SOURCE) {
+    throw invalid('source', `expected 1–${MAX_RAW_ENTRY_SOURCE} characters`);
+  }
+  const occurredAt = entry['occurredAt'];
+  if (!isIsoWithZone(occurredAt)) throw invalid('occurredAt', 'expected an ISO 8601 time with a zone');
+  const receivedAt = entry['receivedAt'];
+  if (receivedAt !== undefined && !isIsoWithZone(receivedAt)) throw invalid('receivedAt', 'expected an ISO 8601 time with a zone');
+  const status = entry['status'] ?? 'new';
+  if (typeof status !== 'string' || !(RAW_ENTRY_STATUSES as readonly string[]).includes(status)) {
+    throw invalid('status', `expected one of ${RAW_ENTRY_STATUSES.join(', ')}`);
+  }
+  const outcomeKind = entry['outcomeKind'];
+  if (outcomeKind !== undefined && outcomeKind !== null && outcomeKind !== 'note') throw invalid('outcomeKind', 'expected "note"');
+  const outcomeId = entry['outcomeId'];
+  if (outcomeId !== undefined && outcomeId !== null && typeof outcomeId !== 'string') throw invalid('outcomeId', 'expected a string');
+
+  const result: ImportableRawEntry = {
+    id: optionalString(entry['id']),
+    text,
+    source,
+    occurredAt,
+    status: status as RawEntryStatus,
+    updatedAt: optionalString(entry['updatedAt']),
+  };
+  if (typeof receivedAt === 'string') result.receivedAt = receivedAt;
+  if (outcomeKind === 'note' && typeof outcomeId === 'string' && outcomeId !== '') {
+    result.outcomeKind = outcomeKind;
+    result.outcomeId = outcomeId;
+  }
+  return result;
+}
+
 function parseArray<T>(data: Record<string, unknown>, key: string, what: string, parse: (entry: unknown, what: string) => T): T[] {
   const value = data[key];
   if (value === undefined) return [];
@@ -252,7 +305,7 @@ function parseArray<T>(data: Record<string, unknown>, key: string, what: string,
 
 /**
  * Parses and validates an exported (or hand-edited) JSON file. Accepts a v2
- * file (notes, foods, food targets; medicines and doses since plan 16), a v1 file (notes only) or a bare array
+ * file (notes, foods, food targets; medicines and doses since plan 16; raw entries since plan 9), a v1 file (notes only) or a bare array
  * of notes. Ids and timestamps are passed through when present so the server's
  * import can upsert by id.
  */
@@ -265,7 +318,7 @@ export function parseExportFile(json: string): ImportBundle {
   }
 
   if (Array.isArray(data)) {
-    return { notes: parseNotes(data), foods: [], medicines: [], doses: [] };
+    return { notes: parseNotes(data), foods: [], medicines: [], doses: [], rawEntries: [] };
   }
 
   if (!isRecord(data) || !Array.isArray(data['notes'])) {
@@ -277,6 +330,7 @@ export function parseExportFile(json: string): ImportBundle {
     foods: [],
     medicines: parseArray(data, 'medicines', 'Medicine', parseMedicine),
     doses: parseArray(data, 'doses', 'Dose', parseDose),
+    rawEntries: parseArray(data, 'rawEntries', 'Raw entry', parseRawEntry),
   };
 
   if (data['foods'] !== undefined) {
