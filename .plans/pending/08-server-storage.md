@@ -160,6 +160,9 @@ PWA: the HTTP stores against a faked `fetch` (shapes, 401 redirect).
    folder. (Renaming earlier would move the Pages path from `/tag-notes/` and break the installed app before the
    data was out. The local folder name also keys this devcontainer's Claude settings volume, so session history
    there starts fresh.)
+6. Push a commit and check that Workers Builds still builds. It identifies the repo by GitHub repo id, so a rename
+   should carry over, but Cloudflare doesn't document it. If it doesn't: the Worker's Settings → Builds → disconnect,
+   then connect the renamed repo with the same build and deploy commands. The live Worker keeps serving meanwhile.
 
 ## Validation (owner)
 
