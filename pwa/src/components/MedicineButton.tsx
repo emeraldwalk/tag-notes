@@ -1,4 +1,4 @@
-import { onCleanup } from 'solid-js';
+import { onCleanup, Show } from 'solid-js';
 import type { Medicine } from '../lib/meds/types';
 import styles from './MedicineButton.module.css';
 
@@ -58,7 +58,10 @@ function MedicineButton(props: MedicineButtonProps) {
         onClick={handleClick}
       >
         <span class={styles.name}>{props.medicine.name}</span>
-        <span class={styles.dose}>{props.medicine.defaultDose ?? ''}</span>
+        {/* Only when set: an empty line would push a name without a dose off center. */}
+        <Show when={props.medicine.defaultDose}>
+          <span class={styles.dose}>{props.medicine.defaultDose}</span>
+        </Show>
       </button>
       <button
         type="button"
@@ -66,7 +69,12 @@ function MedicineButton(props: MedicineButtonProps) {
         aria-label={`${props.medicine.name}: choose time or dose`}
         onClick={() => props.onMore()}
       >
-        …
+        {/* Drawn, not the "…" character, which sits on the text baseline below center. */}
+        <svg class={styles.moreIcon} viewBox="0 0 20 4" aria-hidden="true">
+          <circle cx="2" cy="2" r="2" />
+          <circle cx="10" cy="2" r="2" />
+          <circle cx="18" cy="2" r="2" />
+        </svg>
       </button>
     </div>
   );

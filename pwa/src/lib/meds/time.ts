@@ -50,3 +50,10 @@ export function formatDay(day: string): string {
   const [year, month, date] = day.split('-').map(Number) as [number, number, number];
   return new Date(year, month - 1, date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
+
+/** A local day key as "Today", "Yesterday", or "Tue, Nov 24" (section headers in the Meds log). */
+export function dayLabel(day: string, now = new Date()): string {
+  if (day === dateKey(now)) return 'Today';
+  if (day === dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))) return 'Yesterday';
+  return formatDay(day);
+}

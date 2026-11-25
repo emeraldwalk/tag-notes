@@ -5,7 +5,7 @@
 }
 
 .otherButton {
-  min-height: 4rem;
+  min-height: 3.25rem;
   padding: var(--space-m);
   border: 1.5px dashed var(--color-accent-tint-pressed);
   border-radius: var(--radius-card);
@@ -32,8 +32,16 @@
   grid-template-columns: 4.5rem 1fr auto;
   gap: var(--space-s);
   align-items: baseline;
+  width: 100%;
   min-height: var(--hit);
   padding: var(--space-m) var(--space-l);
+  background: none;
+  border: none;
+  text-align: left;
+}
+
+.doseRow:active {
+  background: var(--color-fill);
 }
 
 .doseTime {
@@ -41,13 +49,38 @@
   font-variant-numeric: tabular-nums;
 }
 
+.doseMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
 .doseName {
   font-weight: 600;
+}
+
+.doseNote {
+  overflow: hidden;
+  font-size: var(--font-footnote);
+  color: var(--color-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .doseAmount {
   color: var(--color-secondary);
   font-size: var(--font-subhead);
+}
+
+.logEnd {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 1px;
+  font-size: var(--font-footnote);
+  color: var(--color-secondary);
 }
 
 /* Floats at the bottom of the screen, above the tab bar, while the list scrolls under it. */

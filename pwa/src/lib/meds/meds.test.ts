@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Note } from '../notes/types';
 import { chunkGroups, defaultChoice, groupMedsNotes } from './convert';
-import { fromLocalInput, historyRange, localInputValue, MAX_RANGE_DAYS, todayRange } from './time';
+import { dayLabel, fromLocalInput, historyRange, localInputValue, MAX_RANGE_DAYS, todayRange } from './time';
 
 const note = (id: string, title: string, createdAt: string): Note => ({
   id,
@@ -76,5 +76,17 @@ describe('dose times', () => {
     expect(first.to).toBe(today.to);
     expect(second.to).toBe(first.from);
     expect(Date.parse(first.to) - Date.parse(first.from)).toBe(MAX_RANGE_DAYS * 24 * 3600 * 1000);
+  });
+});
+
+describe('dayLabel', () => {
+  const now = new Date(2026, 0, 1, 9, 30); // Jan 1: yesterday is in the previous month and year
+  it('names today and yesterday', () => {
+    expect(dayLabel('2026-01-01', now)).toBe('Today');
+    expect(dayLabel('2025-12-31', now)).toBe('Yesterday');
+  });
+  it('dates anything earlier', () => {
+    expect(dayLabel('2025-12-30', now)).not.toMatch(/Today|Yesterday/);
+    expect(dayLabel('2025-12-30', now)).toMatch(/30/);
   });
 });

@@ -5,7 +5,6 @@ import Food from './routes/Food'
 import FoodHistory from './routes/FoodHistory'
 import Inbox from './routes/Inbox'
 import Meds from './routes/Meds'
-import MedsHistory from './routes/MedsHistory'
 import NoteCreate from './routes/NoteCreate'
 import NoteEditor from './routes/NoteEditor'
 import NoteHistory from './routes/NoteHistory'
@@ -35,7 +34,8 @@ function App() {
       <Route path="/food" component={Food} />
       <Route path="/food/history" component={FoodHistory} />
       <Route path="/meds" component={Meds} />
-      <Route path="/meds/history" component={MedsHistory} />
+      {/* History is part of the Meds tab now. */}
+      <Route path="/meds/history" component={() => <Navigate href="/meds" />} />
       <Route path="/settings" component={Settings} />
     </Router>
   )
