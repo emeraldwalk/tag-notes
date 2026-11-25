@@ -96,9 +96,11 @@ export async function signIn(h: Harness, jar: Jar, sub = ME.sub): Promise<Jar> {
   return jar;
 }
 
-/** Empties plan 8's tables. */
+/** Empties plan 8's and plan 16's tables. */
 export async function clearData(): Promise<void> {
   await env.DB.batch([
+    env.DB.prepare('DELETE FROM doses'),
+    env.DB.prepare('DELETE FROM medicines'),
     env.DB.prepare('DELETE FROM note_tags'),
     env.DB.prepare('DELETE FROM notes'),
     env.DB.prepare('DELETE FROM foods'),

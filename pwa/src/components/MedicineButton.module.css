@@ -1,0 +1,46 @@
+.root {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #e5f1ff;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.8rem 0.9rem;
+  border: none;
+  background: none;
+  text-align: left;
+  color: #007aff;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.main:active {
+  background: #cfe4ff;
+}
+
+.name {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.dose {
+  min-height: 1em;
+  font-size: 0.8rem;
+  color: #5a8fd6;
+}
+
+.more {
+  padding: 0 0.9rem;
+  border: none;
+  border-left: 1px solid #cfe4ff;
+  background: none;
+  color: #007aff;
+  font-size: 1.2rem;
+}

@@ -5,6 +5,7 @@ import { foodsApi } from './foods';
 import { glucoseApi, glucoseIngest } from './glucoseRoutes';
 import { jsonError, withCookie } from './http';
 import { importApi } from './import';
+import { medsApi } from './meds';
 import { notesApi } from './notes';
 
 /** The static assets binding (the built PWA), or a stand-in in tests. */
@@ -66,6 +67,7 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   api.route('/glucose', glucoseApi(deps));
   api.route('/', notesApi(deps.db));
   api.route('/', foodsApi(deps.db));
+  api.route('/', medsApi(deps.db));
   api.route('/import', importApi(deps.db, deps.timeZone ?? 'America/Chicago'));
   api.all('*', () => jsonError(404, 'not_found'));
   app.route('/api', api);

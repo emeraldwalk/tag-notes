@@ -9,6 +9,7 @@ import {
 } from './export';
 import type { FoodTargets } from './foods/targets';
 import type { FoodEntry } from './foods/types';
+import type { Dose, Medicine } from './meds/types';
 import type { Note } from './notes/types';
 
 const note: Note = {
@@ -69,7 +70,49 @@ describe('buildExportFile', () => {
     expect(file.notes).toEqual([note]);
     expect(file.foods).toEqual(foods);
     expect(file.foodTargets).toEqual(foodTargets);
+    expect(file.medicines).toEqual([]);
+    expect(file.doses).toEqual([]);
     expect(() => new Date(file.exportedAt).toISOString()).not.toThrow();
+  });
+});
+
+describe('medicines and doses in the file (plan 16)', () => {
+  const medicines: Medicine[] = [
+    { id: 'm1', name: 'Metformin', defaultDose: '500 mg', active: true, sortOrder: 0, createdAt: '2026-11-24T00:00:00.000Z' },
+    { id: 'm2', name: 'Vitamin D', active: false, sortOrder: 1, createdAt: '2026-11-24T00:00:00.000Z' },
+  ];
+  const doses: Dose[] = [
+    { id: 'd1', medicineId: 'm1', medicineName: 'Metformin', dose: '500 mg', takenAt: '2026-11-24T14:00:00.000Z', note: 'n', source: 'tap', createdAt: '2026-11-24T14:00:00.000Z' },
+    { id: 'd2', medicineName: 'Ibuprofen', takenAt: '2026-11-24T15:00:00.000Z', source: 'manual', createdAt: '2026-11-24T15:00:00.000Z' },
+  ];
+
+  it('round-trips medicines and doses', () => {
+    const file = buildExportFile({ notes: [note], foods, foodTargets, medicines, doses });
+    const bundle = parseExportFile(JSON.stringify(file));
+    expect(bundle.medicines).toEqual(medicines);
+    expect(bundle.doses).toEqual(doses);
+  });
+
+  it('reads files without them as none, and fills medicine defaults', () => {
+    expect(parseExportFile(v2Json({ medicines: undefined, doses: undefined }))).toMatchObject({ medicines: [], doses: [] });
+    expect(parseExportFile(v2Json({ medicines: [{ name: ' A ' }] })).medicines).toEqual([
+      { id: undefined, name: 'A', active: true, sortOrder: 0, createdAt: undefined },
+    ]);
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    ['medicines', { medicines: {} }],
+    ['Medicine at index 0', { medicines: [{ name: '' }] }],
+    ['"active"', { medicines: [{ name: 'A', active: 'yes' }] }],
+    ['"sortOrder"', { medicines: [{ name: 'A', sortOrder: 1.5 }] }],
+    ['"source"', { doses: [{ ...doses[1], source: 'shout' }] }],
+    ['"takenAt"', { doses: [{ ...doses[1], takenAt: '2026-11-24T15:00:00' }] }],
+    ['"medicineName"', { doses: [{ ...doses[1], medicineName: ' ' }] }],
+    ['"dose"', { doses: [{ ...doses[1], dose: 5 }] }],
+  ])('rejects %s', (message, overrides) => {
+    const parse = () => parseExportFile(v2Json(overrides));
+    expect(parse).toThrow(InvalidExportFileError);
+    expect(parse).toThrow(message);
   });
 });
 
@@ -108,7 +151,7 @@ describe('parseExportFile', () => {
   it('parses a bare array of notes', () => {
     const bundle = parseExportFile(JSON.stringify([note]));
 
-    expect(bundle).toEqual({ notes: [importedNote], foods: [] });
+    expect(bundle).toEqual({ notes: [importedNote], foods: [], medicines: [], doses: [] });
     expect(bundle.foodTargets).toBeUndefined();
   });
 

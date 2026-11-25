@@ -3,6 +3,8 @@ import type { JSX } from 'solid-js'
 import BottomNav from './components/BottomNav'
 import Food from './routes/Food'
 import FoodHistory from './routes/FoodHistory'
+import Meds from './routes/Meds'
+import MedsHistory from './routes/MedsHistory'
 import NoteCreate from './routes/NoteCreate'
 import NoteEditor from './routes/NoteEditor'
 import NoteHistory from './routes/NoteHistory'
@@ -27,6 +29,8 @@ function App() {
       <Route path="/notes/:id" component={NoteEditor} />
       <Route path="/food" component={Food} />
       <Route path="/food/history" component={FoodHistory} />
+      <Route path="/meds" component={Meds} />
+      <Route path="/meds/history" component={MedsHistory} />
       <Route path="/settings" component={Settings} />
     </Router>
   )

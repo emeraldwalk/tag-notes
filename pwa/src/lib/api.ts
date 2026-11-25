@@ -48,6 +48,7 @@ export function loginUrl(returnTo: string): string {
 const MESSAGES: Record<string, string> = {
   not_found: 'Not found. It may have been deleted.',
   too_large: 'That is too large to save.',
+  duplicate_name: 'There is already a medicine with that name.',
 };
 
 /** Calls `/api<path>`; JSON in and out. Resolves `undefined` for 204. */

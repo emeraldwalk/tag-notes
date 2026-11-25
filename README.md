@@ -18,7 +18,8 @@ npm workspaces, one `package-lock.json` at the root:
 | `worker/` | `tracker-worker`: the Worker `tracker` at `tracker.ingles.place`, with D1 `tracker` and IdP sign-in. It serves the built PWA (`pwa/dist`) behind sign-in. |
 
 `pwa/src/lib/notes/parse.ts` and `pwa/src/lib/export.ts` are shared: the Worker imports them to parse notes and
-validate imports, so they must stay free of browser APIs.
+validate imports (and medicine/dose bodies), so they must stay free of browser APIs. So are the type files they
+import (`notes/types.ts`, `foods/types.ts`, `meds/types.ts`).
 
 ## Development
 

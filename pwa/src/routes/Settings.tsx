@@ -1,6 +1,8 @@
 import { createSignal, onMount, Show } from 'solid-js';
 import AccountSection from '../components/AccountSection';
+import ConvertMedsSection from '../components/ConvertMedsSection';
 import GlucoseSection from '../components/GlucoseSection';
+import MedicinesSection from '../components/MedicinesSection';
 import { errorMessage } from '../lib/api';
 import { exportAll, importBundle } from '../lib/backup';
 import { exportFileName, parseExportFile } from '../lib/export';
@@ -23,6 +25,9 @@ function Settings() {
   const [busy, setBusy] = createSignal(false);
   const [proteinTarget, setProteinTarget] = createSignal('');
   const [calorieTarget, setCalorieTarget] = createSignal('');
+  // Each medicine section reloads when the other changes the list.
+  const [medicinesVersion, setMedicinesVersion] = createSignal(0);
+  const [convertVersion, setConvertVersion] = createSignal(0);
   let fileInput: HTMLInputElement | undefined;
 
   const showError = (err: unknown) => setStatus({ kind: 'error', message: errorMessage(err) });
@@ -76,7 +81,7 @@ function Settings() {
       showError(err);
       return;
     }
-    const { notes, foods } = file;
+    const { notes, foods, doses } = file;
     const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
@@ -88,7 +93,7 @@ function Settings() {
 
     setStatus({
       kind: 'success',
-      message: `Exported ${noteCountText(notes.length)}, ${foodCountText(foods.length)} and food targets.`,
+      message: `Exported ${noteCountText(notes.length)}, ${foodCountText(foods.length)}, ${doses.length} medicine doses and food targets.`,
     });
   };
 
@@ -108,8 +113,11 @@ function Settings() {
       const bundle = parseExportFile(await file.text());
       const result = await importBundle(bundle);
       if (result.targets) await loadTargets();
+      if (result.medicines > 0) setMedicinesVersion((v) => v + 1);
+      setConvertVersion((v) => v + 1);
       await refreshCount();
-      const counts = `${noteCountText(result.notes)}, ${foodCountText(result.foods)}`;
+      const meds = result.medicines + result.doses > 0 ? `, ${result.medicines} medicines, ${result.doses} doses` : '';
+      const counts = `${noteCountText(result.notes)}, ${foodCountText(result.foods)}${meds}`;
       const skipped = result.skipped > 0 ? ` Skipped ${result.skipped} that belong to another account.` : '';
       setStatus({
         kind: 'success',
@@ -158,6 +166,18 @@ function Settings() {
       </section>
 
       <section class={styles.section}>
+        <h2 class={styles.sectionTitle}>Medicines</h2>
+        <MedicinesSection version={medicinesVersion()} onChange={() => setConvertVersion((v) => v + 1)} />
+      </section>
+
+      <ConvertMedsSection
+        version={convertVersion()}
+        onConverted={() => setMedicinesVersion((v) => v + 1)}
+        sectionClass={styles.section}
+        titleClass={styles.sectionTitle}
+      />
+
+      <section class={styles.section}>
         <h2 class={styles.sectionTitle}>Data</h2>
         <p class={styles.noteCount}>
           {noteCountText(noteCount())} and {foodCountText(foodCount())} stored
@@ -199,7 +219,8 @@ function Settings() {
         </Show>
 
         <p class={styles.hint}>
-          Export All saves notes, food entries and food targets in one file.
+          Export All saves notes, food entries, food targets, medicines and
+          doses in one file.
           Importing a file (from this app or the old Tag Notes app) merges it
           into your account: entries whose id matches an existing one replace
           it, others are added. Food targets in the file replace the current

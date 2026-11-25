@@ -1,11 +1,11 @@
 # 16 — Medicine log
 
-- [ ] Migration `0003_medicine.sql`
-- [ ] Medicines and doses APIs; convert-notes API
-- [ ] Meds tab: one-tap "taken" per medicine, time adjust, undo; history
-- [ ] Manage medicines (Settings)
-- [ ] Convert `meds`-tagged notes (Settings)
-- [ ] Tests
+- [x] Migration `0003_medicine.sql`
+- [x] Medicines and doses APIs; convert-notes API
+- [x] Meds tab: one-tap "taken" per medicine, time adjust, undo; history
+- [x] Manage medicines (Settings)
+- [x] Convert `meds`-tagged notes (Settings)
+- [x] Tests
 - [ ] Owner: push, set up medicines, convert old notes, live checks
 
 ## Goal
@@ -113,3 +113,35 @@ deleted only on success; range limit; export/import round trip of medicines and 
 1. Add your medicines; tap one on the Meds tab; it shows under today with the time; Undo removes it.
 2. Change a dose's time from History.
 3. Convert the `meds` notes: counts match; the notes are gone from Notes; the doses show on their original days.
+
+## Implementation notes (2026-11-25)
+
+- **`GET /api/doses` with no `from`/`to`** answers every dose (as `GET /api/foods` does), for Export All. With a
+  range, both are required, `to` after `from`, at most 92 days; otherwise `400 invalid`. History loads 92-day windows
+  back from today ("Load earlier").
+- **Medicine names** are unique per user case-insensitively in the API (`409 duplicate_name` on add and rename);
+  names and doses are trimmed, at most 200 characters. New medicines go to the end of the list (`sortOrder` max + 1).
+- **`POST /api/doses`:** `medicineId` must be one of the user's medicines (`400 invalid` otherwise). `dose` absent →
+  the medicine's default; `dose: null` → none (the sheet sends null when its pre-filled default is cleared).
+- **`convert-notes`** takes at most 50 notes per request (two statements each, one batch of ≤ 100, as plan 8); the
+  PWA splits larger conversions into several requests, each all-or-nothing. Every `medicineId` must be the user's
+  (else `400`, nothing converted). Per note, the dose is inserted only while the note is the user's and still tagged
+  `meds`, and the note is deleted under the same condition; a repeated note id converts once. "New medicine named
+  <title>" creates the medicine first (reusing one of the same name if it already exists).
+- **Import** (`/api/import`) runs medicines then doses after targets, and answers `medicines` and `doses` counts too.
+  A medicine whose name (any case) is already another of the user's medicines, or earlier in the file, is merged
+  rather than inserted (counted under `medicines`, not `skipped`). A dose's `medicineId` links to the user's medicine
+  with that id, else the user's medicine with the dose's `medicineName`, else none; never another user's.
+  `backup.ts` chunks notes, foods, medicines and doses in that order (200 rows per request).
+- Types: `pwa/src/lib/meds/types.ts` (shared with the Worker, types only). Validation for files lives in `export.ts`
+  (`parseMedicine`, `parseDose`, `isDoseSource`, `medicineName`); the Worker's routes use those helpers.
+- UI: the dose sheet is a `<dialog>` (`DoseSheet`), used for "…" / long press (500 ms) on a medicine, "Log something
+  else", and editing in History (with Delete). Undo shows for 6 s after a tap or a sheet log.
+
+## Owner steps
+
+1. Push. The deploy applies migration `0003_medicine.sql` to the remote D1.
+2. Settings → Medicines: add your medicines (default doses), in the order you want the buttons.
+3. Meds tab: validation steps 1–2 below.
+4. Settings → Convert medicine notes: pick a medicine per group, Convert; validation step 3.
+5. Optionally `wrangler tail` while converting a large group: CPU per `convert-notes` request against 10 ms.
