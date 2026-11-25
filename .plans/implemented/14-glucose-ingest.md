@@ -23,7 +23,9 @@
 - Readings were 2 hours behind at first because the Libre 3 app hadn't uploaded to LibreView; the LibreLinkUp app
   showed the same. Opening the Libre 3 app caught both up. A gap like that is upstream of Tracker: the 15-minute
   history fills it once LibreView has the data.
-- Still to check: CPU per cron run in `wrangler tail` (validation step 3).
+- CPU per cron run (`wrangler tail`, 2026-11-25): 4, 5, 9, 5 ms against the free plan's 10 ms. Fine, with thin
+  headroom on the occasional run (likely a fresh isolate). If Workers Logs starts showing `exceededCpu`, store only
+  points newer than the last stored reading; a missed run loses nothing, since the next one's 12-hour history covers it.
 
 ## Goal
 

@@ -83,7 +83,7 @@ Setup (owner):
 If LibreView refuses the Worker (the page shows `http_403` or similar), switch to Home Assistant polling:
 [`docs/home-assistant.md`](docs/home-assistant.md).
 
-The cron uses one of the account's 5 free-plan cron triggers.
+The cron uses one of the account's 5 free-plan cron triggers. Measured CPU per run (2026-11-25): 4–9 ms of the 10 ms allowed.
 
 Sessions last 30 days without use and 30 days at most; signing in again is silent while the IdP session lasts.
 
