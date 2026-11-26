@@ -54,7 +54,6 @@ Implement in this order, on `main`.
 
 | # | Plan | Depends on | Needs from the owner |
 | - | ---- | ---------- | -------------------- |
-| 17 | [Glucose CSV backfill](pending/17-glucose-csv-backfill.md) | 8 ✅ | Push; import the LibreView export from Settings; measure CPU with `wrangler tail` |
 
 ## Not Ready
 
@@ -113,6 +112,7 @@ model id, API key), never hard-coded, and each proposal records the model that p
 | 8 | [Server storage](implemented/08-server-storage.md) | ✅ Done; live, data imported (2026-11-25); still to do: retire GitHub Pages (delete `deploy.yml`) and rename the repo |
 | 16 | [Medicine log](implemented/16-medicine-log.md) | ✅ Done; live, medicines added and `meds` notes converted (2026-11-25) |
 | 9 | [Raw entries + ingest](implemented/09-raw-entries-ingest.md) | ✅ Done; owner still to push, add a "Siri" capture token and build the Shortcut |
+| 17 | [Glucose CSV backfill](implemented/17-glucose-csv-backfill.md) | ✅ Done; LibreView history imported, 2–3 ms CPU per 500 readings (2026-11-25) |
 
 The food log (Food, Food History, targets in Settings, editing an entry, serving size, the Refresh app button) was
 built without a plan and is on `main` (PRs #2–#5, and the `claude/gifted-pasteur-ok1yl7` merge on 2026-11-24).

@@ -6,7 +6,7 @@
 - [x] `.gitignore`: `data/` for LibreView exports (added when the plan was written, 2026-11-25)
 - [x] README: how to get the export and run the backfill
 - [x] `npm run check`
-- [ ] Owner: push, import the export, re-import (all duplicates), measure CPU per request
+- [x] Owner: push, import the export, re-import (all duplicates), measure CPU per request
 
 ## Implementation notes (2026-11-25)
 
@@ -21,6 +21,13 @@
 - `POST /api/ingest/glucose` now checks `OWNER_USER_ID` (503) before reading the body, and uses `body.ts`'s
   `readJson`; its tests pass unchanged.
 - The UI is `pwa/src/components/GlucoseImport.tsx`, inside `GlucoseSection`.
+
+## Live result (2026-11-25)
+
+- Imported the export; the second import reported every reading as already stored.
+- CPU per request during the second import (`wrangler tail`, 37 requests captured): mostly 2–3 ms, one 5 ms and
+  one 11 ms (outcome `ok`, likely a fresh isolate), wall time 30–46 ms. The Worker's part (JSON parse, validation,
+  binding) is the same on a first import; D1's insert work doesn't count against the Worker's CPU. Chunks of 500 stay.
 
 ## Goal
 
@@ -157,6 +164,6 @@ fixtures are synthetic rows written in the test, not lines copied from the real 
 2. Settings → Glucose → Import LibreView CSV… with `data/glucose_11-25-2026.csv`. The preview should show about 98,883
    historic and 1,406 scans, from 2025-11-18 to 2026-11-25, in `America/Chicago`.
 3. Import it (about 200 requests). Then import it again: everything should come back as duplicates.
-4. `wrangler tail tracker --format json` during the import: CPU per request against 10 ms. Record it here.
+4. `wrangler tail tracker --format json` during the import: CPU per request against 10 ms. Recorded above.
 5. Spot-check: `GET /api/glucose` for a day in, say, June 2026. A 5-minute series, times matching the Libre app's
    graph for that day.
