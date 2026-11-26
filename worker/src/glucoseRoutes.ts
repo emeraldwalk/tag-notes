@@ -2,6 +2,7 @@ import { type Context, Hono } from 'hono';
 import type { AppEnv } from './app';
 import { type GlucoseReading, glucoseStatus, insertReadings, readGlucose } from './glucose';
 import { invalid, readJson } from './body';
+import { importBudgetRefusal, rowsWritten, spendImportBudget } from './budget';
 import { jsonError } from './http';
 
 const MAX_INGEST_BYTES = 256 * 1024;
@@ -109,8 +110,16 @@ export function glucoseApi(deps: GlucoseRouteDeps): Hono<AppEnv> {
       r.kind === 'historic' || r.kind === 'scan' ? { trend: null, source: 'csv', kind: r.kind } : `readings[${i}].kind must be "historic" or "scan".`,
     );
     if (typeof readings === 'string') return invalid(readings);
-    const inserted = await insertReadings(deps.db, c.var.session.sub, readings, new Date());
-    return c.json({ inserted, duplicates: readings.length - inserted }, 200, { 'Cache-Control': 'no-store' });
+    // A share of the account's daily D1 writes (budget.ts); already-stored readings cost nothing to send again.
+    const refused = await importBudgetRefusal(deps.db);
+    if (refused) return refused;
+    const written: D1Result[] = [];
+    try {
+      const inserted = await insertReadings(deps.db, c.var.session.sub, readings, new Date(), written);
+      return c.json({ inserted, duplicates: readings.length - inserted }, 200, { 'Cache-Control': 'no-store' });
+    } finally {
+      await spendImportBudget(deps.db, rowsWritten(written)).catch(() => undefined);
+    }
   });
   app.get('/status', async (c) => c.json(await glucoseStatus(deps.db, c.var.session.sub), 200, { 'Cache-Control': 'no-store' }));
   return app;

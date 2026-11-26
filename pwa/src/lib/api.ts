@@ -52,6 +52,8 @@ const MESSAGES: Record<string, string> = {
   already_filed: 'That entry was already made into something.',
   already_decided: 'That was already accepted or rejected.',
   parsing: 'Still reading that entry; try again in a moment.',
+  // budget.ts in the Worker: imports stop at a share of the account's daily writes, so other apps keep working.
+  import_budget: "Today's import limit is used up, so the other apps keep working. What's imported is saved; import the same file again tomorrow to finish.",
 };
 
 /** Calls `/api<path>`; JSON in and out. Resolves `undefined` for 204. */

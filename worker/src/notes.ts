@@ -30,11 +30,17 @@ export const toNote = (r: NoteRow): Note => ({
 
 /**
  * Statements that rewrite a note's `note_tags` from its `tags` column, only if the note is this user's. Run after
- * the note's insert or update, in the same batch.
+ * the note's insert or update, in the same batch. Only tags that changed are written: D1's daily write limit is shared
+ * by every app on the account, and importing the same file again otherwise rewrote every tag.
  */
 export function rewriteTags(db: D1Database, userId: string, noteId: string): D1PreparedStatement[] {
   return [
-    db.prepare('DELETE FROM note_tags WHERE note_id = ? AND user_id = ?').bind(noteId, userId),
+    db
+      .prepare(
+        `DELETE FROM note_tags WHERE note_id = ?1 AND user_id = ?2
+           AND tag NOT IN (SELECT j.value FROM notes n, json_each(n.tags) j WHERE n.id = ?1 AND n.user_id = ?2)`,
+      )
+      .bind(noteId, userId),
     db
       .prepare(
         `INSERT OR IGNORE INTO note_tags (note_id, user_id, tag)

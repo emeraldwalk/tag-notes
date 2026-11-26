@@ -5,6 +5,7 @@ import { parseNoteText } from '../../pwa/src/lib/notes/parse';
 import type { ImportableNote } from '../../pwa/src/lib/notes/types';
 import type { AppEnv } from './app';
 import { invalid, localDate, MAX_IMPORT_BYTES, readJson, toIso } from './body';
+import { importBudgetRefusal, rowsWritten, spendImportBudget } from './budget';
 import { upsertTargets } from './foods';
 import { rewriteTags } from './notes';
 
@@ -34,14 +35,18 @@ export function importedEatenAt(food: Pick<ImportableFoodEntry, 'eatenAt' | 'dat
 
 const badId = (id: string | undefined) => id !== undefined && (id.length === 0 || id.length > MAX_ID_LENGTH);
 
-/** Runs statement groups in batches of at most `MAX_BATCH`, never splitting a group; returns each group's first result. */
-async function runGroups(db: D1Database, groups: D1PreparedStatement[][]): Promise<D1Result[]> {
+/**
+ * Runs statement groups in batches of at most `MAX_BATCH`, never splitting a group; returns each group's first result.
+ * Every result also goes in `all`, for the import budget.
+ */
+async function runGroups(db: D1Database, groups: D1PreparedStatement[][], all: D1Result[]): Promise<D1Result[]> {
   const firsts: D1Result[] = [];
   let batch: D1PreparedStatement[] = [];
   let starts: number[] = [];
   const flush = async () => {
     if (batch.length === 0) return;
     const results = await db.batch(batch);
+    all.push(...results);
     for (const at of starts) firsts.push(results[at]!);
     batch = [];
     starts = [];
@@ -83,7 +88,18 @@ export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
     const badEntry = bundle.rawEntries.findIndex((e) => badId(e.id) || badId(e.outcomeId));
     if (badEntry >= 0) return invalid(`Raw entry at index ${badEntry} has an invalid "id" or "outcomeId".`);
 
-    const sub = c.var.session.sub;
+    // A share of the account's daily D1 writes (budget.ts): past it, the rest waits for another day.
+    const refused = await importBudgetRefusal(db);
+    if (refused) return refused;
+    const written: D1Result[] = [];
+    try {
+      return await save(c.var.session.sub, bundle, written);
+    } finally {
+      await spendImportBudget(db, rowsWritten(written)).catch(() => undefined);
+    }
+  });
+
+  async function save(sub: string, bundle: ReturnType<typeof parseExportFile>, written: D1Result[]): Promise<Response> {
     const now = new Date().toISOString();
 
     const noteGroups = bundle.notes.map((n: ImportableNote) => {
@@ -103,7 +119,7 @@ export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
         ...rewriteTags(db, sub, id),
       ];
     });
-    const noteResults = await runGroups(db, noteGroups);
+    const noteResults = await runGroups(db, noteGroups, written);
 
     const foodGroups = bundle.foods.map((f) => {
       const createdAt = toIso(f.createdAt) ?? now;
@@ -121,9 +137,9 @@ export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
             importedEatenAt(f, createdAt, timeZone), createdAt, now),
       ];
     });
-    const foodResults = await runGroups(db, foodGroups);
+    const foodResults = await runGroups(db, foodGroups, written);
 
-    if (bundle.foodTargets) await upsertTargets(db, sub, bundle.foodTargets).run();
+    if (bundle.foodTargets) written.push(await upsertTargets(db, sub, bundle.foodTargets).run());
 
     // Medicines: names are unique per user (case-insensitively), so one whose name is already another of this
     // user's medicines (or earlier in the file) is merged into it rather than inserted. Its doses link by name.
@@ -156,7 +172,7 @@ export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
             .bind(id, sub, m.name, m.defaultDose ?? null, m.active ? 1 : 0, m.sortOrder, toIso(m.createdAt) ?? now),
         ]);
       }
-      medicineResults = await runGroups(db, medicineGroups);
+      medicineResults = await runGroups(db, medicineGroups, written);
     }
 
     // Doses: `medicineId` links to this user's medicine with that id, else (merged above, or in another chunk) the
@@ -178,7 +194,7 @@ export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
         .bind(d.id ?? crypto.randomUUID(), sub, d.medicineId ?? null, d.medicineName, d.dose ?? null, toIso(d.takenAt),
           d.note ?? null, d.source, toIso(d.createdAt) ?? now),
     ]);
-    const doseResults = await runGroups(db, doseGroups);
+    const doseResults = await runGroups(db, doseGroups, written);
 
     // Raw entries (plan 9): restored as they were; the token that posted one isn't in the file, so a new row has none
     // and an existing row keeps its own.
@@ -198,7 +214,7 @@ export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
             e.outcomeKind ?? null, e.outcomeId ?? null, toIso(e.updatedAt) ?? now),
       ];
     });
-    const entryResults = await runGroups(db, entryGroups);
+    const entryResults = await runGroups(db, entryGroups, written);
 
     const notes = noteResults.filter((r) => r.meta.changes > 0).length;
     const foods = foodResults.filter((r) => r.meta.changes > 0).length;
@@ -215,7 +231,7 @@ export function importApi(db: D1Database, timeZone: string): Hono<AppEnv> {
       skipped: noteResults.length - notes + (foodResults.length - foods) + (medicineResults.length - medicinesSaved) + (doseResults.length - doses)
         + (entryResults.length - rawEntries),
     };
-    return c.json(result, 200, { 'Cache-Control': 'no-store' });
-  });
+    return Response.json(result, { headers: { 'Cache-Control': 'no-store' } });
+  }
   return app;
 }

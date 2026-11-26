@@ -47,7 +47,7 @@ const ROWS_PER_INSERT = 14;
 const iso = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, 'Z');
 
 /** Stores readings for one user, ignoring ones already stored (same user, source and time). */
-export async function insertReadings(db: D1Database, userId: string, readings: GlucoseReading[], now: Date): Promise<number> {
+export async function insertReadings(db: D1Database, userId: string, readings: GlucoseReading[], now: Date, written?: D1Result[]): Promise<number> {
   if (readings.length === 0) return 0;
   const created = iso(now);
   const statements: D1PreparedStatement[] = [];
@@ -60,6 +60,7 @@ export async function insertReadings(db: D1Database, userId: string, readings: G
     );
   }
   const results = await db.batch(statements);
+  written?.push(...results);
   return results.reduce((n, r) => n + (r.meta.changes ?? 0), 0);
 }
 
