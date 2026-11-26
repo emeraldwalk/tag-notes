@@ -19,16 +19,19 @@ Something said to Tracker ("I had two eggs and toast for breakfast", "took my me
 **proposed** food entries, medicine doses or a note, shown on the Inbox entry for me to accept or reject. Nothing is
 logged without my tap. Each proposal records the model that made it, so models can be compared and swapped by config.
 
-Plan 11 builds on this: food lookup tools (USDA FoodData Central, Open Food Facts), correcting a proposal before
-accepting it, and approved foods that resolve repeat meals. This plan's food numbers come from my own recent foods
-when the name matches, else the model's estimate, marked as such.
+**Foods are known or new; no external lookup and no estimates (owner, 2026-11-25).** I mostly eat the same things,
+so the model matches what I said to *my foods* (everything I've logged) and the Worker copies that food's numbers.
+A food that isn't one of mine comes back with a name, quantity and time only, as **Needs numbers**. Accepting it
+asks me for the serving size and nutrition. Its time is the one captured from the entry, not when I fill in the
+numbers. After that it's one of my foods. Plan 11 (a food library with aliases) comes later, if matching on logged
+names turns out not to be enough.
 
 ## Decisions made while writing (2026-11-25)
 
 - **No native tool calling in this plan.** Workers AI documents function calling for one model, and its response
   format isn't documented as the same across models. Here the context (my medicines, my recent foods, the time) goes
   in the prompt and the model answers with one JSON object. That works the same way with any chat model, including
-  small free ones. Plan 11 adds a tool loop where lookups need it.
+  small free ones. Nothing here needs tools.
 - **The default model is picked on real entries** with a compare screen (Settings → Parser), since models can only be
   called from the deployed Worker. Until then `PARSE_MODEL` is the first candidate.
 - **No new cron.** The cron already uses 4–9 ms of its 10 ms. Parsing runs per request: after an entry is saved
@@ -137,16 +140,16 @@ The system prompt holds the rules and the JSON shape. The user message holds:
 - **When:** the entry's `occurredAt` as a local date, weekday and time in `TZ_NAME`. Relative times ("an hour ago",
   "for breakfast") are relative to it.
 - **My medicines:** the active ones, as `id`, name and default dose.
-- **My foods:** the 40 most recent distinct foods (`listRecentDistinct`), each with its name, serving size and
-  protein / calories / carbs per unit.
+- **My foods:** every distinct food I've logged (the `/foods/recent` query, latest entry per name, case-insensitive),
+  newest first, capped at 300: name and serving size only. The model doesn't need the numbers.
 - **The text**, verbatim.
 
 The answer has to be exactly this shape:
 
 ```json
 { "items": [
-  { "kind": "food", "name": "Eggs", "myFood": "Eggs", "quantity": 2, "servingSize": "1 large",
-    "protein": 6, "calories": 72, "carbs": 0.4, "time": "2026-11-25T07:30" },
+  { "kind": "food", "name": "Eggs", "myFood": "Eggs", "quantity": 2, "time": "2026-11-25T07:30" },
+  { "kind": "food", "name": "Sourdough toast", "myFood": null, "quantity": 1, "time": "2026-11-25T07:30" },
   { "kind": "dose", "medicineId": "…", "medicineName": "Metformin", "dose": "500 mg", "time": "2026-11-25T08:00" },
   { "kind": "note", "text": "Felt dizzy after lunch\n\n:symptoms" }
 ] }
@@ -154,23 +157,26 @@ The answer has to be exactly this shape:
 
 - `time` is local `YYYY-MM-DDTHH:MM` or null (= the entry's time). The Worker converts it with `TZ_NAME`. A time
   more than 5 minutes after the entry was received becomes the entry's time.
-- **`myFood`** names one of *my foods* exactly. When it does, the Worker takes servingSize, protein, calories and
-  carbs from that food, not from the model (`basis: 'my-food'`). Otherwise the model's numbers are kept with
-  `basis: 'estimate'`. Nutrition is per unit of `quantity`, as in `FoodEntry`.
+- **`myFood`** names one of *my foods* exactly, case-insensitively. When it does, the Worker copies that food's name,
+  servingSize, protein, calories and carbs from its latest entry (`status: 'known'`). When it's null or not one of
+  mine, the proposal has the model's `name` and `quantity` and no numbers (`status: 'new'`). The model never outputs
+  nutrition; any numbers it adds are ignored. Nutrition is per unit of `quantity`, as in `FoodEntry`.
+- `quantity` is in units of the food's serving ("two eggs" with serving "1 large" → 2). Default 1.
 - `medicineId` must be one of mine, else it's dropped and `medicineName` kept.
 - Text that is neither food nor medicine becomes one `note` (the note text format, with a tag line if the model
   picks tags). Empty `items` is a valid answer ("nothing to log").
 - **Validation** is in the Worker: whole answer JSON (allow a fenced ```json block), known kinds, numbers ≥ 0 and
   sane (quantity ≤ 50, calories per unit ≤ 5000), strings trimmed and length-capped. Items that fail are dropped. If
   the JSON itself fails, the run is `failed` with `bad_output`, keeping `output`. The prompt is built in one module
-  (`worker/src/parse/prompt.ts`), so plan 11 can extend it.
+  (`worker/src/parse/prompt.ts`).
 
 ### Proposal types (`pwa/src/lib/inbox/types.ts`, shared)
 
 ```ts
 export type ProposalData =
-  | { kind: 'food'; name: string; servingSize?: string; quantity: number; protein: number; calories: number;
-      carbs: number; eatenAt: string; basis: 'my-food' | 'estimate' }
+  | { kind: 'food'; status: 'known'; name: string; servingSize?: string; quantity: number; protein: number;
+      calories: number; carbs: number; eatenAt: string }
+  | { kind: 'food'; status: 'new'; name: string; quantity: number; eatenAt: string }   // "Needs numbers"
   | { kind: 'dose'; medicineId?: string; medicineName: string; dose?: string; takenAt: string }
   | { kind: 'note'; text: string };
 
@@ -191,7 +197,7 @@ export interface EntryParse {
 | --- | --- | --- |
 | `GET /api/raw-entries` (existing) | | each entry gains `parse` (one query for the page's latest runs and their proposals, not one per entry) |
 | `POST /api/raw-entries/:id/parse` | `{ model? }` (an id from `PARSE_MODELS`) | runs the parse in this request and returns `200 { entry }` when it ends, `done` or `failed`. `409 already_filed` if the entry has an outcome or any accepted proposal. `409 parsing` if a run started under 60 s ago is still `running` (an older one counts as failed). |
-| `POST /api/proposals/:id/accept` | | `200 { proposal, entry }`: writes the food entry (`date` from `eatenAt` in `TZ_NAME`), dose (`source 'inbox'`, `note` = the entry's text) or note (`createdAt` = the entry's `occurredAt`), and marks the proposal `accepted` with `outcome_id`, in one batch. `409` unless it's `proposed` and from the entry's latest run. |
+| `POST /api/proposals/:id/accept` | `{ food? }`: for a `new` food, **required**: `{ name, servingSize?, quantity, protein, calories, carbs }` (validated as `POST /api/foods`); for a `known` one, optional edits to the same fields; refused for other kinds | `200 { proposal, entry }`: writes the food entry with `eatenAt` = **the proposal's `eatenAt`** (the time captured from the entry, never the accept time) and `date` from it in `TZ_NAME`, dose (`source 'inbox'`, `note` = the entry's text) or note (`createdAt` = the entry's `occurredAt`), and marks the proposal `accepted` with `outcome_id`, in one batch. `409` unless it's `proposed` and from the entry's latest run. |
 | `POST /api/proposals/:id/reject` | | `200 { proposal, entry }` |
 | `GET /api/parse/models` | | `{ models: [ { id, provider, model, available } ], default }` |
 | `POST /api/parse/try` | `{ text, model, occurredAt? }` | `200 { model, modelRef, ms, inputTokens?, outputTokens?, output, proposals: ProposalData[] }`, or `{ …, error }`. Uses my real context; **writes nothing**. |
@@ -213,8 +219,10 @@ export interface EntryParse {
     60 s.
   - `failed`: "Couldn't read this (`error`)" and **Try again**.
   - `done`: one row per proposal. Food: "2 × Eggs (1 large) · 144 kcal, 12 g protein, 1 g carbs · 7:30 AM", plus
-    "estimate" when `basis` is `estimate`. Dose: "Metformin 500 mg · 8:00 AM". Note: its first line. Each row has
-    **Accept** / **Reject**, and the entry has **Accept all** when more than one is proposed. Accepted rows show a
+    "Needs numbers" for a new food: "Sourdough toast × 1 · 7:30 AM · Needs numbers". Dose: "Metformin 500 mg · 8:00 AM". Note: its first line. Each row has
+    **Accept** / **Reject**, and the entry has **Accept all** when more than one is proposed. For a new food,
+    **Add numbers** replaces Accept: an inline form (name, serving size, quantity, protein, calories, carbs) showing
+    the captured time, read-only. Saving it accepts the proposal. Accept all skips new foods; they stay pending. Accepted rows show a
     link to the food day, Meds history or the note. "Nothing to log" for empty proposals. The model id is shown
     small, with **Re-parse** while nothing is accepted.
 - **Settings → Parser:** the models (default marked, unavailable greyed). A text box (pre-filled from a recent
@@ -234,7 +242,10 @@ export interface EntryParse {
 - **Dose `source 'inbox'`** is a dose accepted from a parsed entry, whatever the capture channel; the entry's own
   `source` says Siri, Kitchen or app. Plan 16's `'voice'` stays unused.
 - **`/api/parse/try`** is for comparing models and writes nothing. Its results can't be accepted.
-- `basis: 'my-food'` is my own recent foods only. Plan 11's approved foods and external lookups are separate.
+- A food proposal's **`status: 'known' | 'new'`** is about the food (one of mine or not). The proposal's own
+  `status` (proposed / accepted / rejected) is about my decision. A `new` food stays proposed until I add numbers or
+  reject it, however long that takes; its `eatenAt` never changes.
+- *My foods* are the distinct foods in my log. There's no separate food catalog yet (plan 11 if needed).
 
 ## Export / import
 
@@ -244,8 +255,10 @@ value, since the import accepts the new value.
 
 ## Tests (worker; a fake `ChatProvider`, no network)
 
-- Prompt: contains the local time, active medicines only, at most 40 foods, and the verbatim text.
-- Output handling: fenced JSON; `myFood` replaces nutrition; an unknown `myFood` → estimate; a foreign
+- Prompt: contains the local time, active medicines only, my distinct foods (one per name, any case, at most 300, no numbers), and the verbatim text.
+- Output handling: fenced JSON; `myFood` copies that food's numbers (any case); an unknown or null `myFood` → `new`
+  with no numbers, even if the model sent some; accepting a `new` food without `food` → 400, with it → the entry
+  has the proposal's `eatenAt`, not the accept time; a foreign
   `medicineId` dropped; bad items dropped; non-JSON → `failed bad_output` with `output` kept; local time → UTC
   across a DST change; a future time clamped.
 - Provider adapters: answer-shape normalisation for each Workers AI shape; OpenAI headers (key, session header) and
@@ -264,6 +277,8 @@ value, since the import accepts the new value.
    Set `PARSE_MODEL`, commit and push. Record the comparison in this plan.
 3. Say "Hey Siri, Tracker: I had two eggs and toast for breakfast". Within seconds the Inbox entry shows proposals;
    accept them, and they show in Food on the right day and time; the entry moves to Filed.
-4. "Took my metformin" → a dose proposal → accept → in Meds history with the right time.
-5. Cloudflare dashboard → Workers AI: neurons used per parse, against 10,000 a day. Note it here.
-6. `wrangler tail`: CPU for `POST /api/ingest/text` (including the parse) and `/parse` against 10 ms.
+4. Mention something never logged: it shows Needs numbers. Wait a few minutes, add the numbers: the food entry has
+   the time from the entry, not when the numbers were added. The next mention matches it as known.
+5. "Took my metformin" → a dose proposal → accept → in Meds history with the right time.
+6. Cloudflare dashboard → Workers AI: neurons used per parse, against 10,000 a day. Note it here.
+7. `wrangler tail`: CPU for `POST /api/ingest/text` (including the parse) and `/parse` against 10 ms.

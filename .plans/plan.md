@@ -2,7 +2,7 @@
 
 Tag Notes is becoming **Tracker**: one personal app at `https://tracker.ingles.place` for notes (medicine taken, how
 I feel), food, and the health data behind blood sugar highs (glucose, sleep, exercise). Entries can be typed, dictated
-on the phone or watch, or spoken in the kitchen; the app works out what was meant using food data, and I approve it.
+on the phone or watch, or spoken in the kitchen; the app works out what was meant using the foods I've logged, and I approve it.
 
 This replaces the earlier standalone plan in `/workspaces/tools/health-tracker` (Pi 5 + Bun + SQLite + Tailscale),
 decided 2026-11-24. The goals carried over; the hosting didn't.
@@ -16,7 +16,7 @@ decided 2026-11-24. The goals carried over; the hosting didn't.
  │ Siri Shortcut: dictate ───┼── bearer token ───▶│  ├─ static PWA                     │
  │ Health samples Shortcut ──┼── bearer token ───▶│  ├─ /api (notes, food, entries)    │
  └───────────────────────────┘                    │  ├─ /api/ingest/* (raw text, samples)│
- Kitchen: ReSpeaker → HA Assist ─ bearer token ──▶│  ├─ parse agent (LLM + food tools) │
+ Kitchen: ReSpeaker → HA Assist ─ bearer token ──▶│  ├─ parse agent (LLM, my foods)    │
    (STT via family-mail dash-10's Whisper shim)   │  ├─ cron: LibreLinkUp poller       │
                                                   │  └─ D1                             │
                                                   └────────────────────────────────────┘
@@ -38,11 +38,12 @@ decided 2026-11-24. The goals carried over; the hosting didn't.
 - **Voice reuse:** the kitchen path rides family-mail's dash-10 pipeline (ReSpeaker → HA Assist → Whisper on Workers
   AI). HA matches a prefix sentence (e.g. "(I ate|I had|log) {text}", "I took my {text}") and a `rest_command`
   posts the raw text here. No LLM routing in HA; interpretation happens in this app.
-- **Parse agent:** runs in the Worker, turns a raw entry into *proposed* food entries (or notes) using tools: my
-  recent/approved foods first, then USDA FoodData Central, then Open Food Facts. Proposals need approval; approved
-  foods resolve repeat meals automatically. Model set by config (provider, base URL, model id, key) and recorded on
-  each proposal. Default: a Workers AI model on the free allowance; any OpenAI-compatible endpoint is a config swap.
-  Whether `@mariozechner/pi-ai` / `pi-agent-core` run on Workers is unverified; a plain tool-calling loop is fine too.
+- **Parse agent:** runs in the Worker, turns a raw entry into *proposed* food entries, doses or notes. Foods match
+  my own logged foods, whose numbers are copied; a food I haven't logged before is proposed with no numbers ("Needs
+  numbers") and its captured time, and I fill in the numbers once. No external food lookup and no model estimates
+  (owner, 2026-11-25). Proposals need my approval. Model set by config (provider, base URL, model id, key) and
+  recorded on each run. Default: a Workers AI model on the free allowance; any OpenAI-compatible endpoint is a config
+  swap. Plan 10 has the details.
 - **Free plan: 10 ms CPU per request and cron run.** Waiting on fetch doesn't count. Keep tool results small (page
   sizes, field filters), and do heavy work in the browser: Apple Health `export.zip` backfill and report maths.
 - **Glucose:** cron poller on the unofficial LibreLinkUp API; LibreView CSV for backfill and as the fallback.
@@ -60,10 +61,10 @@ Implement in this order, on `main`.
 
 | # | Plan | Description | Blocked on |
 | - | ---- | ----------- | ---------- |
-| 11 | Food tools + approval | USDA FDC and Open Food Facts as agent tools (a tool loop on plan 10's parser); correct a proposal before accepting (plan 10 has accept / reject); approved items become reusable foods | 10 |
+| 11 | Food library | Only if plan 10's matching on logged food names isn't enough: saved foods with aliases and a default serving, seeded from history, edited in Settings. No external lookup (owner, 2026-11-25) | 10, and a need seen in use |
 | 12 | Kitchen voice | HA custom sentences + `rest_command` posting raw text to plan 9's route; docs for the HA side | 9; family-mail dash-10 phase 1 live |
 | 13 | Health ingest | Shortcuts automation → sample ingest route; `export.zip` backfill parsed in the browser | 8; confirm Shortcuts can read the sample types needed |
-| 15 | Reports | Daily timeline overlay, per-meal glucose response, sleep / exercise correlations, medicine timing | 11, 13, 14, 16, 17 |
+| 15 | Reports | Daily timeline overlay, per-meal glucose response, sleep / exercise correlations, medicine timing | 10, 13, 14 ✅, 16 ✅, 17 ✅ |
 
 ## Model options for plan 10
 
