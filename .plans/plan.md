@@ -54,12 +54,12 @@ Implement in this order, on `main`.
 
 | # | Plan | Depends on | Needs from the owner |
 | - | ---- | ---------- | -------------------- |
+| 10 | [Parse agent](pending/10-parse-agent.md) | 9 ✅, 16 ✅ | Push; compare models on real entries in Settings → Parser and set `PARSE_MODEL`; neurons and CPU checks |
 
 ## Not Ready
 
 | # | Plan | Description | Blocked on |
 | - | ---- | ----------- | ---------- |
-| 10 | Parse agent | Background parse of raw entries into proposals (food entries; medicine doses through plan 16's API); model config; proposals record their model | 9, 16; default model picked by testing real entries (see Model options below) |
 | 11 | Food tools + approval | Recent/approved foods, USDA FDC and Open Food Facts as agent tools; approve / correct proposals in the Food UI; approved items become reusable foods | 10 |
 | 12 | Kitchen voice | HA custom sentences + `rest_command` posting raw text to plan 9's route; docs for the HA side | 9; family-mail dash-10 phase 1 live |
 | 13 | Health ingest | Shortcuts automation → sample ingest route; `export.zip` backfill parsed in the browser | 8; confirm Shortcuts can read the sample types needed |
