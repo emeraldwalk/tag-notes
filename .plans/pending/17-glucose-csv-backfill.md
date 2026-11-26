@@ -3,7 +3,7 @@
 - [ ] `pwa/src/lib/glucose/csv.ts`: LibreView CSV parser with local time → UTC conversion, and tests
 - [ ] `POST /api/glucose/import` (signed in), sharing the reading validation with `POST /api/ingest/glucose`, and tests
 - [ ] Settings → Glucose: pick a file, preview, import in chunks with progress
-- [x] `.gitignore`: LibreView exports (added when the plan was written, 2026-11-25)
+- [x] `.gitignore`: `private/` for LibreView exports (added when the plan was written, 2026-11-25)
 - [ ] README: how to get the export and run the backfill
 - [ ] `npm run check`
 - [ ] Owner: push, import the export, re-import (all duplicates), measure CPU per request
@@ -14,7 +14,7 @@ History from before plan 14's poller (the sensor data starts 2025-11-18) goes in
 `source 'csv'`, so reports (plan 15) can use a year of data. The CSV is parsed in the browser (free plan: 10 ms CPU),
 and readings are posted in chunks.
 
-## The export (from the owner's file, `glucose_11-25-2026.csv`, 2026-11-25)
+## The export (from the owner's file, `private/glucose_11-25-2026.csv`, 2026-11-25)
 
 From libreview.com → Download Glucose Data. About 6 MB with 101,930 lines, CRLF line endings, no quoted fields.
 
@@ -117,7 +117,7 @@ gets near 10 ms, lower the PWA's chunk size; the route's limit stays at 500.
 
 ## .gitignore
 
-LibreView exports hold the owner's name and health data and must never be committed. Add `glucose_*.csv`. Test
+LibreView exports hold the owner's name and health data and must never be committed. They go in `private/` at the repo root, which is gitignored. Test
 fixtures are synthetic rows written in the test, not lines copied from the real export.
 
 ## Tests
@@ -139,7 +139,7 @@ fixtures are synthetic rows written in the test, not lines copied from the real 
 ## Owner steps and validation
 
 1. Push. Workers Builds deploys.
-2. Settings → Glucose → Import LibreView CSV… with `glucose_11-25-2026.csv`. The preview should show about 98,883
+2. Settings → Glucose → Import LibreView CSV… with `private/glucose_11-25-2026.csv`. The preview should show about 98,883
    historic and 1,406 scans, from 2025-11-18 to 2026-11-25, in `America/Chicago`.
 3. Import it (about 200 requests). Then import it again: everything should come back as duplicates.
 4. `wrangler tail tracker --format json` during the import: CPU per request against 10 ms. Record it here.
