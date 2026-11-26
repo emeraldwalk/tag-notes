@@ -54,12 +54,12 @@ Implement in this order, on `main`.
 
 | # | Plan | Depends on | Needs from the owner |
 | - | ---- | ---------- | -------------------- |
+| 17 | [Glucose CSV backfill](pending/17-glucose-csv-backfill.md) | 8 ✅ | Push; import the LibreView export from Settings; measure CPU with `wrangler tail` |
 
 ## Not Ready
 
 | # | Plan | Description | Blocked on |
 | - | ---- | ----------- | ---------- |
-| 17 | Glucose CSV backfill | LibreView CSV export parsed in the browser (Settings), posted in batches as `source 'csv'` readings; history from before plan 14 | 8; a sample export to pin down the columns and date format |
 | 10 | Parse agent | Background parse of raw entries into proposals (food entries; medicine doses through plan 16's API); model config; proposals record their model | 9, 16; default model picked by testing real entries (see Model options below) |
 | 11 | Food tools + approval | Recent/approved foods, USDA FDC and Open Food Facts as agent tools; approve / correct proposals in the Food UI; approved items become reusable foods | 10 |
 | 12 | Kitchen voice | HA custom sentences + `rest_command` posting raw text to plan 9's route; docs for the HA side | 9; family-mail dash-10 phase 1 live |

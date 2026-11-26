@@ -6,3 +6,6 @@ pwa/dev-dist/
 pwa/.vite/
 worker/.wrangler/
 worker/.dev.vars
+
+# LibreView exports (plan 17): health data, never commit
+glucose_*.csv
