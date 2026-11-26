@@ -60,7 +60,7 @@ Implement in this order, on `main`.
 
 | # | Plan | Description | Blocked on |
 | - | ---- | ----------- | ---------- |
-| 11 | Food tools + approval | Recent/approved foods, USDA FDC and Open Food Facts as agent tools; approve / correct proposals in the Food UI; approved items become reusable foods | 10 |
+| 11 | Food tools + approval | USDA FDC and Open Food Facts as agent tools (a tool loop on plan 10's parser); correct a proposal before accepting (plan 10 has accept / reject); approved items become reusable foods | 10 |
 | 12 | Kitchen voice | HA custom sentences + `rest_command` posting raw text to plan 9's route; docs for the HA side | 9; family-mail dash-10 phase 1 live |
 | 13 | Health ingest | Shortcuts automation → sample ingest route; `export.zip` backfill parsed in the browser | 8; confirm Shortcuts can read the sample types needed |
 | 15 | Reports | Daily timeline overlay, per-meal glucose response, sleep / exercise correlations, medicine timing | 11, 13, 14, 16, 17 |
