@@ -145,3 +145,60 @@ describe('glucose reads', () => {
     expect(Object.keys(body.llu as object).sort()).toEqual(['backoffUntil', 'lastError', 'lastOkAt', 'lastRunAt']);
   });
 });
+
+describe('POST /api/glucose/import (plan 17)', () => {
+  const post = (jar: Jar, body: unknown, headers: Record<string, string> = { 'Content-Type': 'application/json' }) =>
+    get(jar, '/api/glucose/import', { method: 'POST', headers, body: typeof body === 'string' ? body : JSON.stringify(body) });
+  const good = {
+    readings: [
+      { ts: '2025-11-19T00:45:00Z', mgDl: 187, kind: 'historic' },
+      { ts: '2025-11-19T02:21:00Z', mgDl: 220, kind: 'scan' },
+    ],
+  };
+  const rows = async () =>
+    (await env.DB.prepare('SELECT user_id, ts, mg_dl, trend, source, kind FROM glucose_readings ORDER BY ts').all()).results;
+
+  beforeEach(async () => {
+    await env.DB.prepare('DELETE FROM glucose_readings').run();
+  });
+
+  it('needs a session', async () => {
+    expect((await post(new Jar(), good)).status).toBe(401);
+    expect(await rows()).toEqual([]);
+  });
+
+  it("stores the readings as source 'csv' for the signed-in user, and counts duplicates on a re-post", async () => {
+    const jar = await signIn(h, new Jar(), 'sub-other');
+    const first = await post(jar, good);
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual({ inserted: 2, duplicates: 0 });
+    expect(await (await post(jar, good)).json()).toEqual({ inserted: 0, duplicates: 2 });
+    expect(await rows()).toEqual([
+      { user_id: 'sub-other', ts: '2025-11-19T00:45:00Z', mg_dl: 187, trend: null, source: 'csv', kind: 'historic' },
+      { user_id: 'sub-other', ts: '2025-11-19T02:21:00Z', mg_dl: 220, trend: null, source: 'csv', kind: 'scan' },
+    ]);
+  });
+
+  it('wants JSON, not too big', async () => {
+    const jar = await signIn(h, new Jar());
+    expect((await post(jar, good, { 'Content-Type': 'text/plain' })).status).toBe(415);
+    expect((await post(jar, 'x'.repeat(300 * 1024))).status).toBe(413);
+  });
+
+  it.each([
+    ['not JSON', '{'],
+    ['no readings', { readings: [] }],
+    ['too many', { readings: Array.from({ length: 501 }, () => good.readings[0]) }],
+    ['bad kind', { readings: [{ ts: '2025-11-19T00:45:00Z', mgDl: 187, kind: 'current' }] }],
+    ['no kind', { readings: [{ ts: '2025-11-19T00:45:00Z', mgDl: 187 }] }],
+    ['no zone', { readings: [{ ts: '2025-11-19T00:45:00', mgDl: 187, kind: 'historic' }] }],
+    ['future', { readings: [{ ts: '2999-01-01T00:00:00Z', mgDl: 187, kind: 'historic' }] }],
+    ['high value', { readings: [{ ts: '2025-11-19T00:45:00Z', mgDl: 601, kind: 'historic' }] }],
+  ])('400s %s', async (_name, body) => {
+    const jar = await signIn(h, new Jar());
+    const res = await post(jar, body);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe('invalid');
+    expect(await rows()).toEqual([]);
+  });
+});

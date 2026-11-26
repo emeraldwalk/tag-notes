@@ -1,12 +1,26 @@
 # 17 — Glucose CSV backfill
 
-- [ ] `pwa/src/lib/glucose/csv.ts`: LibreView CSV parser with local time → UTC conversion, and tests
-- [ ] `POST /api/glucose/import` (signed in), sharing the reading validation with `POST /api/ingest/glucose`, and tests
-- [ ] Settings → Glucose: pick a file, preview, import in chunks with progress
+- [x] `pwa/src/lib/glucose/csv.ts`: LibreView CSV parser with local time → UTC conversion, and tests
+- [x] `POST /api/glucose/import` (signed in), sharing the reading validation with `POST /api/ingest/glucose`, and tests
+- [x] Settings → Glucose: pick a file, preview, import in chunks with progress
 - [x] `.gitignore`: `data/` for LibreView exports (added when the plan was written, 2026-11-25)
-- [ ] README: how to get the export and run the backfill
-- [ ] `npm run check`
+- [x] README: how to get the export and run the backfill
+- [x] `npm run check`
 - [ ] Owner: push, import the export, re-import (all duplicates), measure CPU per request
+
+## Implementation notes (2026-11-25)
+
+- **One reading per ts, not per (ts, kind).** Plan 14's key is `(user_id, source, ts)`, with no `kind`, and 287 scans
+  in the export fall on the same minute as a historic reading. The parser keeps the historic reading and counts the
+  scan as skipped, rather than rebuilding the live table to add `kind` to the key. The owner's file gives 98,883
+  historic and 1,118 scans (288 skipped, 1,639 ignored), from 2025-11-19T00:45Z to 2026-11-26T02:33Z.
+- **Fall back** is as expected: 12 pairs, assigned earlier/later in file order, so 06:00–07:55Z on 2026-11-01 zigzags
+  (e.g. 231, 203, 222). Looking at the values, the right split is clear from continuity (one hour flat around 230,
+  the other falling from 224 to 197). A small two-state best-fit over each pair could fix it if reports ever care.
+- Parsing the whole file takes about 0.75 s in Node; the UI shows "Reading…" meanwhile.
+- `POST /api/ingest/glucose` now checks `OWNER_USER_ID` (503) before reading the body, and uses `body.ts`'s
+  `readJson`; its tests pass unchanged.
+- The UI is `pwa/src/components/GlucoseImport.tsx`, inside `GlucoseSection`.
 
 ## Goal
 
@@ -46,10 +60,10 @@ export interface CsvReading {
 }
 
 export interface ParsedGlucoseCsv {
-  readings: CsvReading[];   // sorted by ts, unique by (ts, kind)
+  readings: CsvReading[];   // sorted by ts, one per ts
   historic: number;         // count of readings by kind
   scans: number;
-  skipped: number;          // rows of type 0/1 that weren't usable (bad value, a time that doesn't exist locally)
+  skipped: number;          // rows of type 0/1 that weren't usable (bad value, a time that doesn't exist locally, a duplicate)
   ignored: number;          // rows of other record types (insulin, food, events)
   first: string | null;     // earliest / latest ts
   last: string | null;
@@ -71,7 +85,8 @@ export function parseLibreViewCsv(text: string, timeZone: string): ParsedGlucose
   doesn't exist (spring forward) is `skipped`. For an ambiguous time (fall back), the *n*th row with the same local
   time and kind (in file order) gets the *n*th of the possible instants, earliest first. The order within that hour
   is a guess (see the export notes): at most one hour a year, accepted.
-- Exact duplicates (same ts and kind) after conversion are kept once.
+- One reading per ts (see the implementation notes): a historic reading wins over a scan at the same minute; other
+  duplicates are kept once. Both count as `skipped`.
 - Pure function, no DOM. 100k rows should parse in well under a second on the phone.
 
 ### Route — `POST /api/glucose/import` (signed in)

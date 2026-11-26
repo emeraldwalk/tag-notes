@@ -1,4 +1,5 @@
 import { api } from './api';
+import type { CsvReading } from './glucose/csv';
 
 export interface Me {
   sub: string;
@@ -15,6 +16,10 @@ export interface GlucoseStatus {
 
 export const getMe = () => api<Me>('/me');
 export const getGlucoseStatus = () => api<GlucoseStatus>('/glucose/status');
+
+/** Plan 17: posts up to 500 LibreView CSV readings (`POST /api/glucose/import`). */
+export const importGlucose = (readings: CsvReading[]) =>
+  api<{ inserted: number; duplicates: number }>('/glucose/import', { method: 'POST', body: { readings } });
 
 /** Signs out of this app and the IdP (a full page load). */
 export const LOGOUT_URL = '/auth/logout';

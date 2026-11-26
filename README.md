@@ -96,6 +96,14 @@ If LibreView refuses the Worker (the page shows `http_403` or similar), switch t
 
 The cron uses one of the account's 5 free-plan cron triggers. Measured CPU per run (2026-11-25): 4–9 ms of the 10 ms allowed.
 
+**History (plan 17):** on libreview.com (the patient's account, not the follower), **Download Glucose Data** gives a
+CSV of everything LibreView has. Keep it in `data/` (gitignored: it has your name and health data). Settings → Glucose
+→ **Import LibreView CSV…** parses it on the phone, in the phone's time zone, shows what it found, and posts it in
+chunks of 500 to `POST /api/glucose/import` as `source 'csv'`. Re-importing is safe: stored readings are skipped.
+Only historic (5-minute) and scan readings are used; a scan at the same minute as a historic reading is dropped, since
+the table keeps one reading per source and time. The 1 AM hour on the fall-back night appears twice in the file, and
+which of each pair is the earlier hour is a guess.
+
 ### Capture (plan 9)
 
 Anything said or typed to Tracker is kept word for word in the **Inbox** (the first tab) before anything interprets

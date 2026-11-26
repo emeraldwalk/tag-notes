@@ -195,7 +195,11 @@ function Settings() {
         <Message kind={status()?.kind ?? 'success'} text={status()?.message} />
       </ListSection>
 
-      <ListSection title="Glucose" padded>
+      <ListSection
+        title="Glucose"
+        padded
+        footer="Import LibreView CSV adds history from before the poller: on libreview.com, Download Glucose Data. Importing the same file again is safe."
+      >
         <GlucoseSection />
       </ListSection>
 

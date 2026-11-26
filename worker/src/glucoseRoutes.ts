@@ -1,6 +1,7 @@
-import { Hono } from 'hono';
+import { type Context, Hono } from 'hono';
 import type { AppEnv } from './app';
 import { type GlucoseReading, glucoseStatus, insertReadings, readGlucose } from './glucose';
+import { invalid, readJson } from './body';
 import { jsonError } from './http';
 
 const MAX_INGEST_BYTES = 256 * 1024;
@@ -24,7 +25,41 @@ export async function tokenMatches(header: string | null, token: string | undefi
   return crypto.subtle.timingSafeEqual(a, b);
 }
 
-const invalid = (detail: string) => Response.json({ error: 'invalid', detail }, { status: 400 });
+
+type ReadingExtra = Pick<GlucoseReading, 'trend' | 'source' | 'kind'>;
+
+/**
+ * The checks both glucose write routes share: a list of 1…500 readings, each with `ts` (ISO 8601 with a zone, not in
+ * the future) and `mgDl` (a whole number, 20…600). `extra` checks the route's own fields. Returns readings, or the
+ * 400 detail.
+ */
+function checkReadings(list: unknown, extra: (r: Record<string, unknown>, i: number) => ReadingExtra | string): GlucoseReading[] | string {
+  if (!Array.isArray(list) || list.length < 1 || list.length > MAX_INGEST_READINGS) {
+    return `readings must be a list of 1 to ${MAX_INGEST_READINGS} items.`;
+  }
+  const latest = Date.now() + FUTURE_SLACK_MS;
+  const readings: GlucoseReading[] = [];
+  for (const [i, item] of list.entries()) {
+    const r = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
+    const ts = normalizeIso(r.ts);
+    if (!ts || Date.parse(ts) > latest) return `readings[${i}].ts must be an ISO 8601 time with a zone, not in the future.`;
+    if (!Number.isInteger(r.mgDl) || (r.mgDl as number) < 20 || (r.mgDl as number) > 600) {
+      return `readings[${i}].mgDl must be a whole number from 20 to 600.`;
+    }
+    const more = extra(r, i);
+    if (typeof more === 'string') return more;
+    readings.push({ ts, mgDl: r.mgDl as number, ...more });
+  }
+  return readings;
+}
+
+/** The JSON body of a glucose write as an object, or the 415 / 413 / 400 to send. */
+async function readReadingsBody(c: Context<AppEnv>): Promise<Record<string, unknown> | Response> {
+  if (c.req.header('Content-Type')?.split(';')[0]?.trim() !== 'application/json') return jsonError(415, 'json_required');
+  const body = await readJson(c, MAX_INGEST_BYTES);
+  if (body instanceof Response) return body;
+  return (body.value && typeof body.value === 'object' ? body.value : {}) as Record<string, unknown>;
+}
 
 export interface GlucoseRouteDeps {
   db: D1Database;
@@ -37,37 +72,17 @@ export function glucoseIngest(deps: GlucoseRouteDeps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.post('/glucose', async (c) => {
     if (!(await tokenMatches(c.req.header('Authorization') ?? null, deps.haToken))) return jsonError(401, 'unauthenticated');
-    if (c.req.header('Content-Type')?.split(';')[0]?.trim() !== 'application/json') return jsonError(415, 'json_required');
-    if (Number(c.req.header('Content-Length') ?? 0) > MAX_INGEST_BYTES) return jsonError(413, 'too_large');
-    const text = await c.req.text();
-    if (new TextEncoder().encode(text).byteLength > MAX_INGEST_BYTES) return jsonError(413, 'too_large');
     if (!deps.ownerUserId) return jsonError(503, 'no_owner_user_id');
-
-    let body: unknown;
-    try {
-      body = JSON.parse(text);
-    } catch {
-      return invalid('Body is not valid JSON.');
-    }
-    const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
+    const b = await readReadingsBody(c);
+    if (b instanceof Response) return b;
     if (b.source !== 'ha') return invalid('source must be "ha".');
-    if (!Array.isArray(b.readings) || b.readings.length < 1 || b.readings.length > MAX_INGEST_READINGS) {
-      return invalid(`readings must be a list of 1 to ${MAX_INGEST_READINGS} items.`);
-    }
-    const latest = Date.now() + FUTURE_SLACK_MS;
-    const readings: GlucoseReading[] = [];
-    for (const [i, item] of b.readings.entries()) {
-      const r = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
-      const ts = normalizeIso(r.ts);
-      if (!ts || Date.parse(ts) > latest) return invalid(`readings[${i}].ts must be an ISO 8601 time with a zone, not in the future.`);
-      if (!Number.isInteger(r.mgDl) || (r.mgDl as number) < 20 || (r.mgDl as number) > 600) {
-        return invalid(`readings[${i}].mgDl must be a whole number from 20 to 600.`);
-      }
+    const readings = checkReadings(b.readings, (r, i) => {
       if (r.trend !== undefined && r.trend !== null && (!Number.isInteger(r.trend) || (r.trend as number) < 1 || (r.trend as number) > 5)) {
-        return invalid(`readings[${i}].trend must be 1 to 5.`);
+        return `readings[${i}].trend must be 1 to 5.`;
       }
-      readings.push({ ts, mgDl: r.mgDl as number, trend: (r.trend as number | undefined) ?? null, source: 'ha', kind: 'current' });
-    }
+      return { trend: (r.trend as number | undefined) ?? null, source: 'ha', kind: 'current' };
+    });
+    if (typeof readings === 'string') return invalid(readings);
     const inserted = await insertReadings(deps.db, deps.ownerUserId, readings, new Date());
     return c.json({ inserted, duplicates: readings.length - inserted });
   });
@@ -85,6 +100,17 @@ export function glucoseApi(deps: GlucoseRouteDeps): Hono<AppEnv> {
     if (span <= 0 || span > MAX_RANGE_MS) return invalid('to must be after from, at most 31 days later.');
     const readings = await readGlucose(deps.db, c.var.session.sub, from, to);
     return c.json({ readings }, 200, { 'Cache-Control': 'no-store' });
+  });
+  /** Plan 17: LibreView CSV readings, parsed in the browser, posted in chunks. */
+  app.post('/import', async (c) => {
+    const b = await readReadingsBody(c);
+    if (b instanceof Response) return b;
+    const readings = checkReadings(b.readings, (r, i) =>
+      r.kind === 'historic' || r.kind === 'scan' ? { trend: null, source: 'csv', kind: r.kind } : `readings[${i}].kind must be "historic" or "scan".`,
+    );
+    if (typeof readings === 'string') return invalid(readings);
+    const inserted = await insertReadings(deps.db, c.var.session.sub, readings, new Date());
+    return c.json({ inserted, duplicates: readings.length - inserted }, 200, { 'Cache-Control': 'no-store' });
   });
   app.get('/status', async (c) => c.json(await glucoseStatus(deps.db, c.var.session.sub), 200, { 'Cache-Control': 'no-store' }));
   return app;

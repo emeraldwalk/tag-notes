@@ -1,6 +1,7 @@
 import { createResource, Show } from 'solid-js';
 import { getGlucoseStatus } from '../lib/account';
 import { errorMessage } from '../lib/api';
+import GlucoseImport from './GlucoseImport';
 import Message from './Message';
 import styles from './GlucoseSection.module.css';
 
@@ -46,6 +47,7 @@ function GlucoseSection() {
           </dl>
         )}
       </Show>
+      <GlucoseImport />
     </div>
   );
 }
