@@ -8,4 +8,4 @@ worker/.wrangler/
 worker/.dev.vars
 
 # Personal data files (e.g. LibreView exports): never commit
-private/
+/data/
