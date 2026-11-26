@@ -1,0 +1,40 @@
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-s);
+}
+
+.text {
+  font-size: var(--font-subhead);
+  overflow-wrap: anywhere;
+}
+
+.decided .text {
+  color: var(--color-secondary);
+}
+
+.badge {
+  font-size: var(--font-caption);
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border: var(--hairline) solid var(--color-warning-border);
+  border-radius: var(--radius-control);
+  padding: 0 0.35rem;
+}
+
+.state {
+  font-size: var(--font-footnote);
+  color: var(--color-secondary);
+}
+
+.actions {
+  display: flex;
+  gap: 0.4rem;
+}

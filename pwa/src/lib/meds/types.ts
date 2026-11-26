@@ -10,8 +10,11 @@ export interface Medicine {
   createdAt: string; // ISO 8601
 }
 
-/** How a dose was logged: a Meds button, the form, a converted `meds` note, or the parse agent (plan 10). */
-export type DoseSource = 'tap' | 'manual' | 'note' | 'voice';
+/**
+ * How a dose was logged: a Meds button, the form, a converted `meds` note, or accepted from a parsed Inbox entry
+ * (`inbox`, plan 10, whatever the capture channel). `voice` is reserved and unused.
+ */
+export type DoseSource = 'tap' | 'manual' | 'note' | 'voice' | 'inbox';
 
 /** One time I took something. `medicineName` is copied when logged, so history survives renames and deletes. */
 export interface Dose {

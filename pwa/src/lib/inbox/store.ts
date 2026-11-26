@@ -1,5 +1,5 @@
 import { api, ApiError } from '../api';
-import type { CreatedIngestToken, InboxStore, IngestToken, RawEntry } from './types';
+import type { CreatedIngestToken, InboxStore, IngestToken, ParseModelInfo, ParseTryResult, Proposal, RawEntry } from './types';
 
 const path = (base: string, id: string) => `${base}/${encodeURIComponent(id)}`;
 
@@ -40,6 +40,16 @@ export function createHttpInboxStore(): InboxStore {
     remove(id) {
       return ignoreNotFound(api<void>(path('/raw-entries', id), { method: 'DELETE' }));
     },
+    async parse(id, model) {
+      const body = model ? { model } : {};
+      return (await api<{ entry: RawEntry }>(`${path('/raw-entries', id)}/parse`, { method: 'POST', body })).entry;
+    },
+    acceptProposal(id, food) {
+      return api<{ proposal: Proposal; entry: RawEntry }>(`${path('/proposals', id)}/accept`, { method: 'POST', body: food ? { food } : {} });
+    },
+    rejectProposal(id) {
+      return api<{ proposal: Proposal; entry: RawEntry }>(`${path('/proposals', id)}/reject`, { method: 'POST', body: {} });
+    },
     async listTokens() {
       return (await api<{ tokens: IngestToken[] }>('/ingest-tokens')).tokens;
     },
@@ -61,3 +71,9 @@ export async function listAllRawEntries(store: InboxStore, pageSize = 200): Prom
     if (page.length < pageSize) return all;
   }
 }
+
+/** Plan 10: the parse models (`GET /api/parse/models`). */
+export const listParseModels = () => api<{ models: ParseModelInfo[]; default: string }>('/parse/models');
+
+/** Plan 10: one model's proposals for a text, saved nowhere (`POST /api/parse/try`). */
+export const tryParse = (text: string, model: string) => api<ParseTryResult>('/parse/try', { method: 'POST', body: { text, model } });

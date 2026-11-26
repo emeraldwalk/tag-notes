@@ -21,7 +21,9 @@ export async function exportAll(): Promise<ExportFileV2> {
     medsStore.listDoses(),
     listAllRawEntries(inboxStore),
   ]);
-  return buildExportFile({ notes, foods, foodTargets, medicines, doses, rawEntries });
+  // Parse runs and proposals (plan 10) are working state, not exported; what they made is.
+  const entries = rawEntries.map(({ parse: _parse, ...entry }) => entry);
+  return buildExportFile({ notes, foods, foodTargets, medicines, doses, rawEntries: entries });
 }
 
 export interface ImportResult {

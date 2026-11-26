@@ -3,6 +3,8 @@ import type { Hono } from 'hono';
 import { afterEach, beforeEach, expect, vi } from 'vitest';
 import { type AppEnv, type Assets, createApp } from '../src/app';
 import { createTrackerAuth, ORIGIN, SESSION_COOKIE } from '../src/auth';
+import type { ParseModel } from '../src/parse/config';
+import type { ChatMessage, ChatProvider } from '../src/parse/providers';
 import { FakeIdp } from './fakeIdp';
 
 const SECRET = 'test-cookie-secret-at-least-32-characters';
@@ -31,6 +33,31 @@ export interface Harness {
   app: Hono<AppEnv>;
   /** Paths the fake ASSETS binding was asked for. */
   assetRequests: string[];
+  /** Plan 10's fake models: answers to give, in order (the last repeats); a function can throw a ProviderError. */
+  answers: (string | (() => string))[];
+  /** Every call the fake models got. */
+  modelCalls: { model: string; messages: ChatMessage[]; sessionId: string }[];
+  /** Background parses (`waitUntil` work); `settle()` awaits them. */
+  deferred: Promise<unknown>[];
+  settle(): Promise<void>;
+}
+
+/** The parse models tests see: two callable fakes, and one whose API key isn't set. */
+export const TEST_MODELS: ParseModel[] = [
+  { id: 'fake', provider: 'workers-ai', model: '@cf/test/fake' },
+  { id: 'fake-2', provider: 'workers-ai', model: '@cf/test/fake-2' },
+  { id: 'keyless', provider: 'openai', model: 'm', baseUrl: 'https://example.test/v1', apiKeySecret: 'NOPE' },
+];
+
+function fakeProvider(h: Harness, model: ParseModel): ChatProvider | null {
+  if (model.id === 'keyless') return null;
+  return {
+    async complete(messages, opts) {
+      h.modelCalls.push({ model: model.id, messages, sessionId: opts.sessionId });
+      const next = h.answers.length > 1 ? h.answers.shift()! : (h.answers[0] ?? '{"items":[]}');
+      return { text: typeof next === 'function' ? next() : next, inputTokens: 100, outputTokens: 20 };
+    },
+  };
 }
 
 /** The PWA's files as a stand-in for `env.ASSETS`: HTML for pages (the SPA fallback), JSON for the manifest. */
@@ -49,10 +76,16 @@ function fakeAssets(requests: string[]): Assets {
 
 /** Registers beforeEach/afterEach for a fresh IdP and app per test; read the fields inside tests. */
 export function useHarness(opts: { timeZone?: string } = {}): Harness {
-  const h = { assetRequests: [] } as unknown as Harness;
+  const h = { assetRequests: [], answers: [], modelCalls: [], deferred: [] } as unknown as Harness;
+  h.settle = async () => {
+    while (h.deferred.length) await Promise.all(h.deferred.splice(0));
+  };
   beforeEach(async () => {
     h.idp = await new FakeIdp().start();
     h.assetRequests.length = 0;
+    h.answers = ['{"items":[]}'];
+    h.modelCalls = [];
+    h.deferred = [];
     const auth = createTrackerAuth({ issuer: h.idp.issuer, clientId: h.idp.clientId, clientSecret: h.idp.clientSecret, cookieSecret: SECRET });
     h.app = createApp({
       assets: fakeAssets(h.assetRequests),
@@ -62,9 +95,16 @@ export function useHarness(opts: { timeZone?: string } = {}): Harness {
       haToken: 'test-ha-token',
       ownerUserId: 'sub-brian',
       timeZone: opts.timeZone ?? 'America/Chicago',
+      parse: {
+        models: TEST_MODELS,
+        defaultModel: 'fake',
+        providerFor: (model) => fakeProvider(h, model),
+        defer: (work) => h.deferred.push(work),
+      },
     });
   });
-  afterEach(() => {
+  afterEach(async () => {
+    await h.settle();
     vi.unstubAllGlobals();
   });
   return h;
@@ -96,9 +136,11 @@ export async function signIn(h: Harness, jar: Jar, sub = ME.sub): Promise<Jar> {
   return jar;
 }
 
-/** Empties plan 8's, plan 16's and plan 9's tables. */
+/** Empties plan 8's, plan 16's, plan 9's and plan 10's tables. */
 export async function clearData(): Promise<void> {
   await env.DB.batch([
+    env.DB.prepare('DELETE FROM proposals'),
+    env.DB.prepare('DELETE FROM parse_runs'),
     env.DB.prepare('DELETE FROM raw_entries'),
     env.DB.prepare('DELETE FROM ingest_tokens'),
     env.DB.prepare('DELETE FROM doses'),

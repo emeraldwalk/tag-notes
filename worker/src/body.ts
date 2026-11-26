@@ -33,3 +33,22 @@ export function toIso(value: unknown): string | null {
   const ms = Date.parse(value);
   return Number.isNaN(ms) ? null : new Date(ms).toISOString();
 }
+
+/**
+ * A condition an INSERT ... SELECT runs under (plan 10: a proposal's accept writes its row only if the claim in the
+ * same batch held). `sql` is a boolean SQL expression with `?` placeholders for `params`.
+ */
+export interface InsertGuard {
+  sql: string;
+  params: unknown[];
+}
+
+/** `INSERT INTO <table> (<columns>) SELECT ?, ?, ... [WHERE guard] [RETURNING ...]`, bound. */
+export function guardedInsert(db: D1Database, table: string, columns: string[], values: unknown[], guard?: InsertGuard, returning?: string): D1PreparedStatement {
+  const placeholders = columns.map(() => '?').join(', ');
+  const where = guard ? ` WHERE ${guard.sql}` : '';
+  const ret = returning ? ` RETURNING ${returning}` : '';
+  return db
+    .prepare(`INSERT INTO ${table} (${columns.join(', ')}) SELECT ${placeholders}${where}${ret}`)
+    .bind(...values, ...(guard?.params ?? []));
+}

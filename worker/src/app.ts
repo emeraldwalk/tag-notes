@@ -8,6 +8,8 @@ import { importApi } from './import';
 import { inboxApi, textIngest } from './inbox';
 import { medsApi } from './meds';
 import { notesApi } from './notes';
+import { parseApi } from './parse/routes';
+import { createParser, type ParseDeps } from './parse/run';
 
 /** The static assets binding (the built PWA), or a stand-in in tests. */
 export interface Assets {
@@ -25,8 +27,10 @@ export interface AppDeps {
   haToken: string | undefined;
   /** The IdP sub that pushed and polled readings belong to (the cron and HA have no session). */
   ownerUserId: string;
-  /** IANA zone for local dates (the import's `eatenAt` rule). */
+  /** IANA zone for local dates (the import's `eatenAt` rule, the parse agent's times). */
   timeZone?: string;
+  /** Plan 10's parse agent: models, providers. Without it, nothing is parsed and no model is listed. */
+  parse?: Omit<ParseDeps, 'timeZone'>;
 }
 
 /**
@@ -49,11 +53,13 @@ export type AppEnv = { Variables: { session: AppSession } };
  */
 export function createApp(deps: AppDeps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
+  const timeZone = deps.timeZone ?? 'America/Chicago';
+  const parser = createParser(deps.db, { models: [], defaultModel: '', providerFor: () => null, ...deps.parse, timeZone });
   app.route('/', authRoutes(deps.auth));
   // Pushes with a bearer token instead of a session, so mounted before the session middleware: glucose from Home
   // Assistant (HA_INGEST_TOKEN, plan 14), and text from capture sources (ingest tokens in D1, plan 9).
   app.route('/api/ingest', glucoseIngest(deps));
-  app.route('/api/ingest', textIngest(deps.db));
+  app.route('/api/ingest', textIngest(deps.db, parser));
 
   const api = new Hono<AppEnv>();
   api.use('*', async (c, next) => {
@@ -71,8 +77,9 @@ export function createApp(deps: AppDeps): Hono<AppEnv> {
   api.route('/', notesApi(deps.db));
   api.route('/', foodsApi(deps.db));
   api.route('/', medsApi(deps.db));
-  api.route('/', inboxApi(deps.db));
-  api.route('/import', importApi(deps.db, deps.timeZone ?? 'America/Chicago'));
+  api.route('/', inboxApi(deps.db, parser));
+  api.route('/', parseApi(deps.db, parser, timeZone));
+  api.route('/import', importApi(deps.db, timeZone));
   api.all('*', () => jsonError(404, 'not_found'));
   app.route('/api', api);
   // `/auth/*` paths the IdP routes don't answer are not the app.

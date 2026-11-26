@@ -146,6 +146,26 @@ curl -sS https://tracker.ingles.place/api/ingest/text \
 Home Assistant's kitchen voice (plan 12) will post the same way with its own token ("Kitchen"). The glucose push
 (`POST /api/ingest/glucose`, `HA_INGEST_TOKEN`) is separate and unchanged.
 
+### Parse agent (plan 10)
+
+Each new Inbox entry (typed, Siri, Home Assistant) is read by a model once it's saved. The entry then shows
+**proposals**: food entries, medicine doses or a note, each with **Accept** / **Reject**. Nothing is logged until
+accepted. When everything is decided and something was accepted, the entry moves to Filed.
+
+- **Foods are mine or new.** The model matches what was said to the foods I've logged, and the Worker copies that
+  food's serving and numbers (the model never does nutrition). A food I haven't logged before shows **Needs
+  numbers**. **Add Numbers** asks for its serving, protein, calories and carbs once, and the food entry gets the time
+  captured from the entry, not the time I filled it in. There is no external food lookup.
+- **Medicines** match my medicine list; a dose accepted here has source `inbox` and the entry's text as its note.
+- **Models are config**, in `worker/wrangler.jsonc`: `PARSE_MODELS` lists them and `PARSE_MODEL` picks the default.
+  Each run records which model it used. Settings → Parser tries a text against each model side by side, using my
+  medicines and foods, and saves nothing; use it to pick the default.
+- **Workers AI** (the `AI` binding) needs no key. The free plan includes 10,000 neurons a day (reset 00:00 UTC);
+  after that, parses fail with `quota` until the next day. The Cloudflare dashboard → Workers AI shows usage.
+- **Another provider** (any OpenAI-compatible API, e.g. OpenCode Go): add an entry with `"provider": "openai"`,
+  `baseUrl`, `model`, `apiKeySecret` (the *name* of a secret), and optional `headers` / `sessionHeader`. Then from
+  `worker/`: `npx wrangler secret put <that name>`. Until the secret is set, the model is listed as unavailable.
+
 Sessions last 30 days without use and 30 days at most; signing in again is silent while the IdP session lasts.
 
 To read CPU time per request (the free plan allows 10 ms), run in your own terminal while making requests:

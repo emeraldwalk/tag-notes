@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { isDoseSource, isIsoWithZone, MAX_MEDICINE_TEXT, medicineName } from '../../pwa/src/lib/export';
 import type { ConvertResult, Dose, DoseSource, Medicine } from '../../pwa/src/lib/meds/types';
 import type { AppEnv } from './app';
-import { invalid, readJson, toIso } from './body';
+import { guardedInsert, type InsertGuard, invalid, readJson, toIso } from './body';
 import { jsonError } from './http';
 
 export interface MedicineRow {
@@ -74,6 +74,31 @@ function optionalTime(body: Record<string, unknown>, key: string): Field<string 
   if (value === undefined) return { ok: true, value: undefined };
   if (!isIsoWithZone(value)) return { ok: false, detail: `${key} must be an ISO 8601 time with a zone.` };
   return { ok: true, value: toIso(value)! };
+}
+
+/** A dose to write. */
+export interface DoseInsert {
+  id: string;
+  userId: string;
+  medicineId: string | null;
+  medicineName: string;
+  dose: string | null;
+  takenAt: string;
+  note: string | null;
+  source: DoseSource;
+  createdAt: string;
+}
+
+/** The INSERT for one dose (`POST /api/doses`, and accepting a dose proposal under a guard), returning its row. */
+export function doseInsert(db: D1Database, d: DoseInsert, guard?: InsertGuard): D1PreparedStatement {
+  return guardedInsert(
+    db,
+    'doses',
+    ['id', 'user_id', 'medicine_id', 'medicine_name', 'dose', 'taken_at', 'note', 'source', 'created_at'],
+    [d.id, d.userId, d.medicineId, d.medicineName, d.dose, d.takenAt, d.note, d.source, d.createdAt],
+    guard,
+    DOSE_COLUMNS,
+  );
 }
 
 const nameTaken = (db: D1Database, userId: string, name: string, exceptId: string | null) =>
@@ -201,7 +226,7 @@ export function medsApi(db: D1Database): Hono<AppEnv> {
     const sub = c.var.session.sub;
 
     const source = body['source'];
-    if (!isDoseSource(source)) return invalid('source must be one of tap, manual, note, voice.');
+    if (!isDoseSource(source)) return invalid('source must be one of tap, manual, note, voice, inbox.');
     const medicineId = body['medicineId'];
     if (medicineId !== undefined && medicineId !== null && typeof medicineId !== 'string') return invalid('medicineId must be a string.');
     const dose = optionalText(body, 'dose', MAX_MEDICINE_TEXT);
@@ -225,14 +250,17 @@ export function medsApi(db: D1Database): Hono<AppEnv> {
     }
 
     const now = new Date().toISOString();
-    const row = await db
-      .prepare(
-        `INSERT INTO doses (id, user_id, medicine_id, medicine_name, dose, taken_at, note, source, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${DOSE_COLUMNS}`,
-      )
-      .bind(crypto.randomUUID(), sub, typeof medicineId === 'string' ? medicineId : null, name, doseText, takenAt.value ?? now,
-        note.value ?? null, source, now)
-      .first<DoseRow>();
+    const row = await doseInsert(db, {
+      id: crypto.randomUUID(),
+      userId: sub,
+      medicineId: typeof medicineId === 'string' ? medicineId : null,
+      medicineName: name,
+      dose: doseText,
+      takenAt: takenAt.value ?? now,
+      note: note.value ?? null,
+      source,
+      createdAt: now,
+    }).first<DoseRow>();
     return c.json({ dose: toDose(row!) }, 201, noStore);
   });
 

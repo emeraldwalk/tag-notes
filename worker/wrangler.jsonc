@@ -27,6 +27,8 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Plan 10: Workers AI for the parse agent (free plan: 10,000 neurons a day).
+  "ai": { "binding": "AI" },
   // Plan 14: poll LibreLinkUp every 5 minutes (one of the account's 5 free-plan cron triggers).
   "triggers": { "crons": ["*/5 * * * *"] },
   "vars": {
@@ -39,6 +41,16 @@
     "OWNER_USER_ID": "j8tSwNOzQWO3auoNg1IHMUJAnu3sGgYY",
     // LibreLinkUp's region ("us", "eu", ...; a wrong one is redirected) and the app version its API expects.
     "LLU_REGION": "us",
-    "LLU_VERSION": "4.16.0"
+    "LLU_VERSION": "4.16.0",
+    // Plan 10: models the parse agent can use (Settings → Parser compares them). `json`: how to ask for JSON
+    // ("response_format", "guided_json" or "none"). An "openai" provider takes baseUrl, apiKeySecret (a secret's
+    // name), headers and sessionHeader; see README "Parse agent".
+    "PARSE_MODELS": [
+      { "id": "llama-3.3-70b", "provider": "workers-ai", "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "json": "response_format" },
+      { "id": "gpt-oss-20b", "provider": "workers-ai", "model": "@cf/openai/gpt-oss-20b", "json": "none", "maxTokens": 2048 },
+      { "id": "mistral-small-3.1", "provider": "workers-ai", "model": "@cf/mistralai/mistral-small-3.1-24b-instruct", "json": "guided_json" }
+    ],
+    // The model new entries are parsed with: an id from PARSE_MODELS.
+    "PARSE_MODEL": "llama-3.3-70b"
   }
 }

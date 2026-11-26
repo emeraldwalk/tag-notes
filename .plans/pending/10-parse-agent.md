@@ -1,17 +1,43 @@
 # 10 — Parse agent
 
-- [ ] Candidate models: pick 2–3 Workers AI models from the catalog (free plan, JSON output) and record them here
-- [ ] Migration `0005_parse.sql`; `ai` binding; `PARSE_MODELS` / `PARSE_MODEL` vars; `npx wrangler types`
-- [ ] Provider adapters (Workers AI binding, OpenAI-compatible) behind one interface
-- [ ] Parser: prompt with context, model output validated into proposals, run recorded with its model
-- [ ] Triggers: after `POST /api/ingest/text` and `POST /api/raw-entries` (in `waitUntil`), and `POST /api/raw-entries/:id/parse`
-- [ ] Accept / reject proposals (food entry, dose, note); the entry is filed when all are decided
-- [ ] Inbox: parse state and proposals on each new entry
-- [ ] Settings → Parser: try a text against each model side by side (`POST /api/parse/try`, saves nothing)
-- [ ] Tests (fake provider; no network)
-- [ ] README: config, adding a model, the free allowance
-- [ ] `npm run check`
+- [x] Candidate models: pick 2–3 Workers AI models from the catalog (free plan, JSON output) and record them here
+- [x] Migration `0005_parse.sql`; `ai` binding; `PARSE_MODELS` / `PARSE_MODEL` vars; `npx wrangler types`
+- [x] Provider adapters (Workers AI binding, OpenAI-compatible) behind one interface
+- [x] Parser: prompt with context, model output validated into proposals, run recorded with its model
+- [x] Triggers: after `POST /api/ingest/text` and `POST /api/raw-entries` (in `waitUntil`), and `POST /api/raw-entries/:id/parse`
+- [x] Accept / reject proposals (food entry, dose, note); the entry is filed when all are decided
+- [x] Inbox: parse state and proposals on each new entry
+- [x] Settings → Parser: try a text against each model side by side (`POST /api/parse/try`, saves nothing)
+- [x] Tests (fake provider; no network)
+- [x] README: config, adding a model, the free allowance
+- [x] `npm run check`
 - [ ] Owner: push, compare models on real entries, set `PARSE_MODEL`, live checks
+
+## Implementation notes (2026-11-25)
+
+- **Candidates** (Workers AI catalog and pricing pages, read 2026-11-25; neurons per M input / output tokens):
+  - `llama-3.3-70b`: `@cf/meta/llama-3.3-70b-instruct-fp8-fast`, 26,668 / 204,805. The only one on the JSON mode
+    page's list (`response_format` json_schema); 24k context. The default until the comparison.
+  - `gpt-oss-20b`: `@cf/openai/gpt-oss-20b`, 18,182 / 27,273. Cheapest; no documented JSON mode (`json: "none"`),
+    and reasoning tokens count as output, so `maxTokens` 2048.
+  - `mistral-small-3.1`: `@cf/mistralai/mistral-small-3.1-24b-instruct`, 31,876 / 50,488, via `guided_json`.
+  - Skipped: Qwen3 30B (deprecated 2026-11-20); kimi, glm, deepseek v4 (need Workers Paid or Gateway credits).
+  - Estimate: a parse with ~300 foods is about 2–4k input tokens; on llama-3.3-70b that is about 50–110 neurons in
+    plus ~20 out, so roughly 80+ parses a day on the free allowance. Check the real number (validation 6).
+- **Answer shapes** differ by model, so `workersAiText` takes `response` as a string or an object, OpenAI-style
+  `choices`, or Responses-style `output`. Which one each candidate really returns is only known live; the compare
+  screen shows the raw answer.
+- **Tests and the AI binding:** the binding is remote-only, so `vitest.config.ts` sets `remoteBindings: false`; tests
+  use fake providers (`TEST_MODELS` in the harness) and collect background parses with `defer`.
+- **Shared code:** local time → UTC moved from the CSV parser to `pwa/src/lib/zone.ts` (used by both). Food, dose and
+  note inserts are `foodInsert` / `doseInsert` / `noteInsert`, taking an optional guard (`guardedInsert` in
+  `body.ts`), so accepting writes the same rows as the POST routes, only if the claim in the same batch held.
+- **Export** drops `parse` from raw entries (Export All builds them from the list endpoint, which now includes it).
+- **UI:** `EntryParseSection` / `ProposalRow` / `FoodNumbersForm` on the Inbox card; `ParserSection` in Settings. A
+  just-saved entry shows "Reading…" at once, and the Inbox polls every 3 s for up to 60 s. Accept All takes the
+  proposals that need no numbers, one at a time. Checked in a headless browser (390×844) against a mock API: proposals,
+  Add Numbers (captured time shown), Accept All filing the entry, Reading… → proposals, failed state with Try
+  Again, and the Parser comparison.
 
 ## Goal
 

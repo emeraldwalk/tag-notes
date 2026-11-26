@@ -224,7 +224,8 @@ describe('export / import of raw entries', () => {
     await ingest(secret, { text: 'spoken', occurredAt: '2026-11-24T08:30:00Z' });
     const typed = await addEntry(jar, { text: 'typed' });
     await send(h, jar, `/api/raw-entries/${typed.id}/note`, { method: 'POST' });
-    const all = await entries(jar, '?status=all');
+    // As Export All writes them: without plan 10's `parse`, which isn't exported.
+    const all = (await entries(jar, '?status=all')).map(({ parse: _parse, ...e }: Row) => e as Row);
     const file = { app: 'tag-notes', version: 2, notes: [], foods: [], rawEntries: all };
 
     const fresh = await signIn(h, new Jar(), 'sub-fresh');

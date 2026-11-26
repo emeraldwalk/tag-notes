@@ -2,7 +2,7 @@ import { type Context, Hono } from 'hono';
 import { InvalidExportFileError, parseFoodEntry, parseFoodTargets } from '../../pwa/src/lib/export';
 import type { FoodEntry, FoodTargets, ImportableFoodEntry } from '../../pwa/src/lib/foods/types';
 import type { AppEnv } from './app';
-import { invalid, readJson, toIso } from './body';
+import { guardedInsert, type InsertGuard, invalid, readJson, toIso } from './body';
 import { jsonError } from './http';
 
 export interface FoodRow {
@@ -39,6 +39,30 @@ export function toFood(r: FoodRow): FoodEntry {
   if (r.serving_size !== null) food.servingSize = r.serving_size;
   if (r.eaten_at !== null) food.eatenAt = r.eaten_at;
   return food;
+}
+
+/** A food entry to write: `date` is its local day, `eatenAt` UTC ISO or null. */
+export interface FoodInsert {
+  name: string;
+  servingSize?: string | null;
+  quantity: number;
+  protein: number;
+  calories: number;
+  carbs: number;
+  date: string;
+  eatenAt: string | null;
+}
+
+/** The INSERT for one food entry (`POST /api/foods`, and accepting a food proposal under a guard), returning its row. */
+export function foodInsert(db: D1Database, userId: string, id: string, f: FoodInsert, now: string, guard?: InsertGuard): D1PreparedStatement {
+  return guardedInsert(
+    db,
+    'foods',
+    ['id', 'user_id', 'name', 'serving_size', 'quantity', 'protein', 'calories', 'carbs', 'date', 'eaten_at', 'created_at', 'updated_at'],
+    [id, userId, f.name, f.servingSize ?? null, f.quantity, f.protein, f.calories, f.carbs, f.date, f.eatenAt, now, now],
+    guard,
+    COLUMNS,
+  );
 }
 
 /** A request body as a food entry; `id` and `createdAt` in it are ignored. */
@@ -87,14 +111,7 @@ export function foodsApi(db: D1Database): Hono<AppEnv> {
     if (input instanceof Response) return input;
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
-    const row = await db
-      .prepare(
-        `INSERT INTO foods (id, user_id, name, serving_size, quantity, protein, calories, carbs, date, eaten_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${COLUMNS}`,
-      )
-      .bind(id, c.var.session.sub, input.name, input.servingSize ?? null, input.quantity, input.protein, input.calories, input.carbs,
-        input.date, toIso(input.eatenAt), now, now)
-      .first<FoodRow>();
+    const row = await foodInsert(db, c.var.session.sub, id, { ...input, eatenAt: toIso(input.eatenAt) }, now).first<FoodRow>();
     return c.json({ food: toFood(row!) }, 201, noStore);
   });
 

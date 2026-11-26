@@ -9,6 +9,7 @@ import ListSection from '../components/ListSection';
 import MedicinesSection from '../components/MedicinesSection';
 import Message from '../components/Message';
 import Page from '../components/Page';
+import ParserSection from '../components/ParserSection';
 import { errorMessage } from '../lib/api';
 import { exportAll, importBundle } from '../lib/backup';
 import { exportFileName, parseExportFile } from '../lib/export';
@@ -173,6 +174,14 @@ function Settings() {
         footer="Each source (the Siri Shortcut, Home Assistant) gets its own token to post text to the Inbox. Entries show the source's name. The README has the Shortcut's steps."
       >
         <CaptureSourcesSection />
+      </ListSection>
+
+      <ListSection
+        title="Parser"
+        padded
+        footer="Inbox entries are read by the default model. Try a text against each model to compare them: this uses your medicines and foods, and saves nothing. The default is PARSE_MODEL in worker/wrangler.jsonc."
+      >
+        <ParserSection />
       </ListSection>
 
       <ListSection

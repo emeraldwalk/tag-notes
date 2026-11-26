@@ -136,6 +136,11 @@ describe('raw entries in the file (plan 9)', () => {
     expect(buildExportFile({ notes: [], foods: [], foodTargets }).rawEntries).toEqual([]);
   });
 
+  it('keeps a "proposals" outcome (plan 10)', () => {
+    const [parsed] = parseExportFile(v2Json({ rawEntries: [{ ...entry, outcomeKind: 'proposals', outcomeId: 'run-1' }] })).rawEntries;
+    expect(parsed).toMatchObject({ outcomeKind: 'proposals', outcomeId: 'run-1' });
+  });
+
   it('is optional, defaults status to new, and drops an outcome without an id', () => {
     expect(parseExportFile(v2Json({ rawEntries: undefined })).rawEntries).toEqual([]);
     const [parsed] = parseExportFile(v2Json({ rawEntries: [{ text: 'x', source: 'app', occurredAt: '2026-11-24T14:00:00Z', outcomeKind: 'note' }] })).rawEntries;
@@ -153,7 +158,7 @@ describe('raw entries in the file (plan 9)', () => {
     ['outcomeKind', { outcomeKind: 'food' }],
   ])('rejects a bad %s with the entry index', (field, patch) => {
     expect(() => parseExportFile(v2Json({ rawEntries: [entry, { ...entry, ...patch }] }))).toThrow(
-      new InvalidExportFileError(`Raw entry at index 1 has an invalid "${field}" (${field === 'text' ? 'expected 1–4000 characters' : field === 'source' ? 'expected 1–40 characters' : field === 'status' ? 'expected one of new, done, dismissed' : field === 'outcomeKind' ? 'expected "note"' : 'expected an ISO 8601 time with a zone'}).`),
+      new InvalidExportFileError(`Raw entry at index 1 has an invalid "${field}" (${field === 'text' ? 'expected 1–4000 characters' : field === 'source' ? 'expected 1–40 characters' : field === 'status' ? 'expected one of new, done, dismissed' : field === 'outcomeKind' ? 'expected "note" or "proposals"' : 'expected an ISO 8601 time with a zone'}).`),
     );
   });
 });

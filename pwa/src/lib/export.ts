@@ -173,7 +173,7 @@ export function parseFoodTargets(value: unknown): FoodTargets {
 /** Longest medicine name or dose text accepted (free text, but not an essay). */
 export const MAX_MEDICINE_TEXT = 200;
 
-const DOSE_SOURCES: readonly DoseSource[] = ['tap', 'manual', 'note', 'voice'];
+const DOSE_SOURCES: readonly DoseSource[] = ['tap', 'manual', 'note', 'voice', 'inbox'];
 
 export function isDoseSource(value: unknown): value is DoseSource {
   return typeof value === 'string' && (DOSE_SOURCES as readonly string[]).includes(value);
@@ -276,7 +276,9 @@ export function parseRawEntry(entry: unknown, what: string): ImportableRawEntry 
     throw invalid('status', `expected one of ${RAW_ENTRY_STATUSES.join(', ')}`);
   }
   const outcomeKind = entry['outcomeKind'];
-  if (outcomeKind !== undefined && outcomeKind !== null && outcomeKind !== 'note') throw invalid('outcomeKind', 'expected "note"');
+  if (outcomeKind !== undefined && outcomeKind !== null && outcomeKind !== 'note' && outcomeKind !== 'proposals') {
+    throw invalid('outcomeKind', 'expected "note" or "proposals"');
+  }
   const outcomeId = entry['outcomeId'];
   if (outcomeId !== undefined && outcomeId !== null && typeof outcomeId !== 'string') throw invalid('outcomeId', 'expected a string');
 
@@ -289,7 +291,7 @@ export function parseRawEntry(entry: unknown, what: string): ImportableRawEntry 
     updatedAt: optionalString(entry['updatedAt']),
   };
   if (typeof receivedAt === 'string') result.receivedAt = receivedAt;
-  if (outcomeKind === 'note' && typeof outcomeId === 'string' && outcomeId !== '') {
+  if ((outcomeKind === 'note' || outcomeKind === 'proposals') && typeof outcomeId === 'string' && outcomeId !== '') {
     result.outcomeKind = outcomeKind;
     result.outcomeId = outcomeId;
   }

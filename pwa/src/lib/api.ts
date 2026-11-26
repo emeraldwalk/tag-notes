@@ -50,6 +50,8 @@ const MESSAGES: Record<string, string> = {
   too_large: 'That is too large to save.',
   duplicate_name: 'There is already a medicine with that name.',
   already_filed: 'That entry was already made into something.',
+  already_decided: 'That was already accepted or rejected.',
+  parsing: 'Still reading that entry; try again in a moment.',
 };
 
 /** Calls `/api<path>`; JSON in and out. Resolves `undefined` for 204. */

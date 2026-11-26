@@ -7,6 +7,7 @@ import type { AppEnv } from './app';
 import { invalid, readJson, toIso } from './body';
 import { jsonError } from './http';
 import { rewriteTags } from './notes';
+import type { Parser } from './parse/run';
 
 /** Longest raw entry, after trimming (plan 9; the export file's limit too). */
 export const MAX_ENTRY_TEXT = MAX_RAW_ENTRY_TEXT;
@@ -110,7 +111,7 @@ const insertEntry = (db: D1Database, e: { id: string; userId: string; text: stri
     .bind(e.id, e.userId, e.text, e.source, e.tokenId, e.occurredAt, e.now, e.now);
 
 /** `POST /api/ingest/text`: a capture source (Siri Shortcut, Home Assistant) with its bearer token. No session. */
-export function textIngest(db: D1Database): Hono<AppEnv> {
+export function textIngest(db: D1Database, parser?: Parser): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.post('/text', async (c) => {
     const header = c.req.header('Authorization') ?? '';
@@ -135,6 +136,7 @@ export function textIngest(db: D1Database): Hono<AppEnv> {
       insertEntry(db, { id, userId: token.user_id, text: parsed.text, source: token.name, tokenId: token.id, occurredAt: parsed.occurredAt, now }),
       db.prepare('UPDATE ingest_tokens SET last_used_at = ? WHERE id = ?').bind(now, token.id),
     ]);
+    parser?.parseLater(c, token.user_id, id);
     const preview = parsed.text.length > SAVED_PREVIEW ? `${parsed.text.slice(0, SAVED_PREVIEW - 1)}…` : parsed.text;
     return c.json({ id, saved: `Saved: ${preview}` }, 201, noStore);
   });
@@ -142,7 +144,7 @@ export function textIngest(db: D1Database): Hono<AppEnv> {
 }
 
 /** `/api/raw-entries` and `/api/ingest-tokens`, mounted inside `/api` (the session middleware has run). */
-export function inboxApi(db: D1Database): Hono<AppEnv> {
+export function inboxApi(db: D1Database, parser?: Parser): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   const getEntry = (userId: string, id: string) =>
@@ -170,7 +172,8 @@ export function inboxApi(db: D1Database): Hono<AppEnv> {
       )
       .bind(c.var.session.sub, status, before, limit, beforeId)
       .all<RawEntryRow>();
-    return c.json({ entries: results.map(toRawEntry) }, 200, noStore);
+    const entries = results.map(toRawEntry);
+    return c.json({ entries: parser ? await parser.attach(c.var.session.sub, entries) : entries }, 200, noStore);
   });
 
   app.get('/raw-entries/count', async (c) => {
@@ -191,6 +194,7 @@ export function inboxApi(db: D1Database): Hono<AppEnv> {
     const id = crypto.randomUUID();
     await insertEntry(db, { id, userId: sub, text: parsed.text, source: 'app', tokenId: null, occurredAt: parsed.occurredAt, now }).run();
     const row = await getEntry(sub, id);
+    parser?.parseLater(c, sub, id);
     return c.json({ entry: toRawEntry(row!) }, 201, noStore);
   });
 

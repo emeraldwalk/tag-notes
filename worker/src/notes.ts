@@ -2,7 +2,7 @@ import { type Context, Hono } from 'hono';
 import { parseNoteText } from '../../pwa/src/lib/notes/parse';
 import type { Note } from '../../pwa/src/lib/notes/types';
 import type { AppEnv } from './app';
-import { invalid, readJson } from './body';
+import { guardedInsert, type InsertGuard, invalid, readJson } from './body';
 import { jsonError } from './http';
 
 interface NoteRow {
@@ -41,6 +41,20 @@ export function rewriteTags(db: D1Database, userId: string, noteId: string): D1P
          SELECT n.id, n.user_id, j.value FROM notes n, json_each(n.tags) j WHERE n.id = ? AND n.user_id = ?`,
       )
       .bind(noteId, userId),
+  ];
+}
+
+/** The statements that write one note and its tags (`POST /api/notes`, and accepting a note proposal under a guard). */
+export function noteInsert(db: D1Database, userId: string, note: Note, guard?: InsertGuard): D1PreparedStatement[] {
+  return [
+    guardedInsert(
+      db,
+      'notes',
+      ['id', 'user_id', 'raw_text', 'title', 'body', 'tags', 'created_at', 'updated_at'],
+      [note.id, userId, note.rawText, note.title, note.body, JSON.stringify(note.tags), note.createdAt, note.updatedAt],
+      guard,
+    ),
+    ...rewriteTags(db, userId, note.id),
   ];
 }
 
@@ -85,12 +99,7 @@ export function notesApi(db: D1Database): Hono<AppEnv> {
     const sub = c.var.session.sub;
     const now = nowIso();
     const note: Note = { id: crypto.randomUUID(), rawText, ...parseNoteText(rawText), createdAt: now, updatedAt: now };
-    await db.batch([
-      db
-        .prepare('INSERT INTO notes (id, user_id, raw_text, title, body, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(note.id, sub, rawText, note.title, note.body, JSON.stringify(note.tags), now, now),
-      ...rewriteTags(db, sub, note.id),
-    ]);
+    await db.batch(noteInsert(db, sub, note));
     return c.json({ note }, 201, noStore);
   });
 

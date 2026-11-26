@@ -1,0 +1,33 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+  padding: var(--space-s) 0;
+}
+
+.when,
+.hint {
+  margin: 0;
+  font-size: var(--font-footnote);
+  color: var(--color-secondary);
+}
+
+.grid2,
+.grid4 {
+  display: grid;
+  gap: var(--space-s);
+}
+
+.grid2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.grid4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}

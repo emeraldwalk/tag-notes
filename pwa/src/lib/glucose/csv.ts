@@ -5,6 +5,8 @@
  * `Device Timestamp` is the phone's local time (`MM-DD-YYYY hh:mm AM|PM`, no zone), converted to UTC in `timeZone`.
  */
 
+import { createZoneConverter, UnknownTimeZoneError } from '../zone';
+
 export type CsvReadingKind = 'historic' | 'scan';
 
 export interface CsvReading {
@@ -44,49 +46,16 @@ const COLUMNS = {
 const TIMESTAMP = /^(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2}) (AM|PM)$/;
 const MIN_MG_DL = 20;
 const MAX_MG_DL = 600;
-const HOUR_MS = 3_600_000;
-const DAY_MS = 24 * HOUR_MS;
-
-/** The zone's UTC offset (ms) at `instant`, from `Intl` (`new Date(string)` would use the runtime's own zone). */
-function offsetAt(format: Intl.DateTimeFormat, instant: number): number {
-  const p: Record<string, number> = {};
-  for (const part of format.formatToParts(instant)) if (part.type !== 'literal') p[part.type] = Number(part.value);
-  return Date.UTC(p.year!, p.month! - 1, p.day!, p.hour! % 24, p.minute!, p.second!) - Math.floor(instant / 1000) * 1000;
-}
-
-/**
- * The UTC offsets that a local hour has in the zone, earliest instant first: one normally, none in a spring-forward
- * gap, two in a fall-back hour. Assumes transitions fall on whole hours (true for US and EU zones).
- */
-function hourOffsets(format: Intl.DateTimeFormat, wallHourMs: number): number[] {
-  const wall = wallHourMs + HOUR_MS / 2;
-  const found: number[] = [];
-  for (const offset of [offsetAt(format, wall - DAY_MS), offsetAt(format, wall + DAY_MS)]) {
-    if (found.includes(offset)) continue;
-    if (offsetAt(format, wall - offset) === offset) found.push(offset);
-  }
-  // A larger offset means an earlier instant for the same wall time.
-  return found.sort((a, b) => b - a);
-}
-
 const iso = (ms: number) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');
 
 /** Parses a LibreView CSV export. Throws `InvalidGlucoseCsvError` for a file it can't read. */
 export function parseLibreViewCsv(text: string, timeZone: string): ParsedGlucoseCsv {
-  let format: Intl.DateTimeFormat;
+  let zone: ReturnType<typeof createZoneConverter>;
   try {
-    format = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      hourCycle: 'h23',
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric',
-    });
-  } catch {
-    throw new InvalidGlucoseCsvError(`Unknown time zone "${timeZone}".`);
+    zone = createZoneConverter(timeZone);
+  } catch (err) {
+    if (err instanceof UnknownTimeZoneError) throw new InvalidGlucoseCsvError(err.message);
+    throw err;
   }
 
   const lines = text.replace(/^﻿/, '').split(/\r?\n/);
@@ -104,7 +73,6 @@ export function parseLibreViewCsv(text: string, timeZone: string): ParsedGlucose
     col[key] = at;
   }
 
-  const offsetsByHour = new Map<number, number[]>();
   const seen = new Map<string, number>();
   const byTs = new Map<string, CsvReading>();
   let skipped = 0;
@@ -134,10 +102,8 @@ export function parseLibreViewCsv(text: string, timeZone: string): ParsedGlucose
 
     const hour12 = Number(m[4]);
     const hour = (hour12 % 12) + (m[6] === 'PM' ? 12 : 0);
-    const wallHour = Date.UTC(Number(m[3]), Number(m[1]) - 1, Number(m[2]), hour);
-    let offsets = offsetsByHour.get(wallHour);
-    if (!offsets) offsetsByHour.set(wallHour, (offsets = hourOffsets(format, wallHour)));
-    if (offsets.length === 0) {
+    const instants = zone.candidates(Number(m[3]), Number(m[1]), Number(m[2]), hour, Number(m[5]));
+    if (instants.length === 0) {
       skipped++;
       continue;
     }
@@ -146,7 +112,7 @@ export function parseLibreViewCsv(text: string, timeZone: string): ParsedGlucose
     const key = `${stamp}|${kind}`;
     const n = seen.get(key) ?? 0;
     seen.set(key, n + 1);
-    const ts = iso(wallHour + Number(m[5]) * 60_000 - offsets[Math.min(n, offsets.length - 1)]!);
+    const ts = iso(instants[Math.min(n, instants.length - 1)]!);
 
     // One reading per ts (the table's key has no kind): a historic reading wins over a scan at the same minute.
     const existing = byTs.get(ts);

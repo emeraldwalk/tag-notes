@@ -3,6 +3,9 @@ import { type AppEnv, createApp } from './app';
 import { createTrackerAuth } from './auth';
 import { pollLibreLinkUp } from './glucose';
 import type { LluConfig } from './llu';
+import { readParseModels } from './parse/config';
+import { type ChatProvider, openAiProvider, workersAiProvider } from './parse/providers';
+import type { ParseModel } from './parse/config';
 
 // One app per isolate: the IdP client caches its cookie key and the provider's discovery and keys.
 let cached: { key: string; app: Hono<AppEnv> } | undefined;
@@ -26,10 +29,22 @@ function appFor(env: Env): Hono<AppEnv> {
         haToken: env.HA_INGEST_TOKEN,
         ownerUserId: env.OWNER_USER_ID,
         timeZone: env.TZ_NAME,
+        parse: {
+          models: readParseModels(env.PARSE_MODELS),
+          defaultModel: env.PARSE_MODEL,
+          providerFor: (model) => providerFor(env, model),
+        },
       }),
     };
   }
   return cached.app;
+}
+
+/** The provider for a parse model; null when its API key secret isn't set. */
+function providerFor(env: Env, model: ParseModel): ChatProvider | null {
+  if (model.provider === 'workers-ai') return workersAiProvider(env.AI, model);
+  const key = model.apiKeySecret ? (env as unknown as Record<string, unknown>)[model.apiKeySecret] : undefined;
+  return typeof key === 'string' && key ? openAiProvider(model, key, (input, init) => fetch(input, init)) : null;
 }
 
 export function lluConfig(env: Env): LluConfig | null {

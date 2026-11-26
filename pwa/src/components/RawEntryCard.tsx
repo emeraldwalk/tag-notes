@@ -1,8 +1,9 @@
 import { A } from '@solidjs/router';
 import { Show } from 'solid-js';
-import type { RawEntry, RawEntryStatus } from '../lib/inbox/types';
+import type { FoodNumbers, Proposal, RawEntry, RawEntryStatus } from '../lib/inbox/types';
 import { formatEntryTime } from '../lib/inbox/time';
 import Button from './Button';
+import EntryParseSection from './EntryParseSection';
 import styles from './RawEntryCard.module.css';
 
 export interface RawEntryCardProps {
@@ -11,6 +12,11 @@ export interface RawEntryCardProps {
   onMakeNote: () => void;
   onSetStatus: (status: RawEntryStatus) => void;
   onDelete: () => void;
+  /** Plan 10: parse now (or again). */
+  onParse: () => void;
+  onAccept: (proposal: Proposal, food?: FoodNumbers) => void;
+  onReject: (proposal: Proposal) => void;
+  onAcceptAll: (proposals: Proposal[]) => void;
 }
 
 const STATUS_LABEL: Record<RawEntryStatus, string> = { new: 'New', done: 'Done', dismissed: 'Dismissed' };
@@ -30,6 +36,10 @@ function RawEntryCard(props: RawEntryCardProps) {
           <span aria-hidden="true">·</span>
           <span>{STATUS_LABEL[props.entry.status]}</span>
         </Show>
+        <Show when={props.entry.outcomeKind === 'proposals'}>
+          <span aria-hidden="true">·</span>
+          <span>Logged</span>
+        </Show>
         <Show when={props.entry.outcomeKind === 'note' && props.entry.outcomeId}>
           {(noteId) => (
             <A class={styles.outcome} href={`/notes/${encodeURIComponent(noteId())}?from=inbox`}>
@@ -38,6 +48,16 @@ function RawEntryCard(props: RawEntryCardProps) {
           )}
         </Show>
       </div>
+      <Show when={isNew()}>
+        <EntryParseSection
+          parse={props.entry.parse}
+          disabled={props.disabled}
+          onParse={() => props.onParse()}
+          onAccept={(proposal, food) => props.onAccept(proposal, food)}
+          onReject={(proposal) => props.onReject(proposal)}
+          onAcceptAll={(proposals) => props.onAcceptAll(proposals)}
+        />
+      </Show>
       <div class={styles.actions}>
         <Show
           when={isNew()}
