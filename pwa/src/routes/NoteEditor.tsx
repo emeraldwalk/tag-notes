@@ -1,7 +1,6 @@
 import { useParams, useSearchParams } from '@solidjs/router';
 import { createResource, Show } from 'solid-js';
 import EmptyState from '../components/EmptyState';
-import NavBar from '../components/NavBar';
 import NoteForm from '../components/NoteForm';
 import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
@@ -20,7 +19,7 @@ function NoteEditor() {
     <Show
       when={note.state === 'ready' && note()}
       fallback={
-        <Page nav={<NavBar title="Note" back={back()} />}>
+        <Page title="Note" back={back()}>
           <Show when={!note.loading}>
             <EmptyState>{note.error ? errorMessage(note.error) : 'This note no longer exists.'}</EmptyState>
           </Show>

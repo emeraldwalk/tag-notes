@@ -2,8 +2,10 @@ import { type JSX, Show } from 'solid-js';
 import styles from './ListSection.module.css';
 
 export interface ListSectionProps {
-  /** Small caps header above the card. */
+  /** Header above the card: small caps (settings), or bold with `prominent`. */
   title?: JSX.Element;
+  /** A content list's date group (Today, Yesterday, …): a bold header, like Notes and Reminders. */
+  prominent?: boolean;
   /** Gray explanatory text under the card. */
   footer?: JSX.Element;
   /** The card holds a form or text (padded) rather than rows (each row pads itself; hairlines between them). */
@@ -16,7 +18,9 @@ function ListSection(props: ListSectionProps) {
   return (
     <section class={styles.section}>
       <Show when={props.title}>
-        <h2 class={styles.header}>{props.title}</h2>
+        <h2 class={styles.header} classList={{ [styles.prominent]: props.prominent }}>
+          {props.title}
+        </h2>
       </Show>
       <div class={styles.card} classList={{ [styles.padded]: props.padded }}>
         {props.children}

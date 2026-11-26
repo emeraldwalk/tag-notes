@@ -2,7 +2,6 @@ import { createMemo, createSignal, For, onMount, Show } from 'solid-js';
 import EmptyState from '../components/EmptyState';
 import ListSection from '../components/ListSection';
 import Message from '../components/Message';
-import NavBar from '../components/NavBar';
 import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
 import { foodStore } from '../lib/foods/store-instance';
@@ -65,7 +64,7 @@ function FoodHistory() {
   });
 
   return (
-    <Page nav={<NavBar title="Food History" back={{ href: '/food', label: 'Food' }} />}>
+    <Page title="Food History" back={{ href: '/food', label: 'Food' }}>
       <Message kind="error" text={error()} />
 
       <Show when={loaded()}>
@@ -73,6 +72,7 @@ function FoodHistory() {
           <For each={groups()}>
             {(group) => (
               <ListSection
+                prominent
                 title={formatDate(group.date)}
                 footer={`${Math.round(group.protein)}g protein · ${Math.round(group.calories)} cal · ${Math.round(group.carbs)}g carbs`}
               >

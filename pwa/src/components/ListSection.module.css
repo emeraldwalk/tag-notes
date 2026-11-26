@@ -17,6 +17,15 @@
   letter-spacing: 0.02em;
 }
 
+.prominent {
+  padding: 0 var(--space-xs);
+  font-size: var(--font-section);
+  font-weight: 700;
+  color: var(--color-label);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .card {
   display: flex;
   flex-direction: column;

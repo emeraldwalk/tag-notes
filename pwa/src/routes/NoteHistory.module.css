@@ -4,12 +4,6 @@
   gap: var(--space-s);
 }
 
-.search {
-  min-height: 36px;
-  background: var(--color-fill);
-  border-color: transparent;
-}
-
 /* One scrolling row of tags, not a block that grows with every tag. */
 .chips {
   display: flex;
@@ -41,59 +35,3 @@
   color: var(--color-on-accent);
 }
 
-.row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: var(--space-s);
-  min-height: var(--hit);
-  padding: var(--space-m) var(--space-l);
-  color: inherit;
-  text-decoration: none;
-}
-
-.row:active {
-  background: var(--color-fill);
-}
-
-.main {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.title {
-  overflow: hidden;
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.untitled {
-  color: var(--color-secondary);
-  font-weight: 400;
-  font-style: italic;
-}
-
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem 0.5rem;
-  font-size: var(--font-footnote);
-  color: var(--color-secondary);
-}
-
-.tag {
-  padding: 0.05rem 0.5rem;
-  background: var(--color-accent-tint);
-  color: var(--color-accent);
-  border-radius: 999px;
-}
-
-.chevron {
-  color: var(--color-tertiary);
-  font-size: 1.4rem;
-  line-height: 1;
-}

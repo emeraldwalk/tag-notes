@@ -1,0 +1,32 @@
+.field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 36px;
+  padding: 0 var(--space-s);
+  background: var(--color-fill);
+  border-radius: var(--radius-control);
+  color: var(--color-secondary);
+}
+
+.field:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.icon {
+  width: 17px;
+  height: 17px;
+}
+
+.input {
+  min-height: 36px;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+.input:focus {
+  outline: none;
+}

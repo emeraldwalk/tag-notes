@@ -4,7 +4,6 @@ import EmptyState from '../components/EmptyState';
 import Field from '../components/Field';
 import ListSection from '../components/ListSection';
 import Message from '../components/Message';
-import NavBar from '../components/NavBar';
 import NavButton from '../components/NavButton';
 import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
@@ -214,7 +213,7 @@ function Food() {
     `${Math.round(entry.protein * entry.quantity)}g protein · ${Math.round(entry.calories * entry.quantity)} cal · ${Math.round(entry.carbs * entry.quantity)}g carbs`;
 
   return (
-    <Page nav={<NavBar title="Food" trailing={<NavButton href="/food/history">History</NavButton>} />}>
+    <Page title="Food" large trailing={<NavButton href="/food/history">History</NavButton>}>
       <div class={styles.stats}>
         <div class={styles.remainingRow}>
           <For

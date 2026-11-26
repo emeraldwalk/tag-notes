@@ -16,12 +16,16 @@ export interface NavBarProps {
   leading?: JSX.Element;
   /** Buttons on the right: NavButton. */
   trailing?: JSX.Element;
+  /** The page shows a large title instead (not scrolled yet): fade the small one out. */
+  titleHidden?: boolean;
+  /** Nothing is scrolled under the bar: no background or hairline, so it blends into the page (iOS). */
+  scrollEdge?: boolean;
 }
 
-/** iOS-style nav bar: back (or leading) on the left, title centered, actions on the right. */
+/** iOS-style nav bar: back (or leading) on the left, title centered, actions on the right. Page renders it. */
 function NavBar(props: NavBarProps) {
   return (
-    <header class={styles.navBar}>
+    <header class={styles.navBar} classList={{ [styles.scrollEdge]: props.scrollEdge }}>
       <div class={styles.side}>
         <Show when={props.back} fallback={props.leading}>
           {(back) => (
@@ -34,7 +38,10 @@ function NavBar(props: NavBarProps) {
           )}
         </Show>
       </div>
-      <h1 class={styles.title}>{props.title}</h1>
+      {/* While hidden, the page's large title is the heading. */}
+      <h1 class={styles.title} classList={{ [styles.titleHidden]: props.titleHidden }} aria-hidden={props.titleHidden}>
+        {props.title}
+      </h1>
       <div class={`${styles.side} ${styles.sideRight}`}>{props.trailing}</div>
     </header>
   );

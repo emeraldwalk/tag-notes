@@ -5,7 +5,7 @@ import { parseNoteText, parseTags, serializeNote } from '../lib/notes/parse';
 import Button from './Button';
 import Field from './Field';
 import Message from './Message';
-import NavBar, { type NavBarBack } from './NavBar';
+import type { NavBarBack } from './NavBar';
 import NavButton from './NavButton';
 import Page from './Page';
 import styles from './NoteForm.module.css';
@@ -77,17 +77,13 @@ function NoteForm(props: NoteFormProps) {
   return (
     <Page
       fill
-      nav={
-        <NavBar
-          title={props.title}
-          back={props.back}
-          leading={<NavButton href={props.doneHref}>Cancel</NavButton>}
-          trailing={
-            <NavButton primary disabled={!canSave()} onClick={handleSave}>
-              {busy() ? 'Saving…' : 'Save'}
-            </NavButton>
-          }
-        />
+      title={props.title}
+      back={props.back}
+      leading={<NavButton href={props.doneHref}>Cancel</NavButton>}
+      trailing={
+        <NavButton primary disabled={!canSave()} onClick={handleSave}>
+          {busy() ? 'Saving…' : 'Save'}
+        </NavButton>
       }
     >
       <input

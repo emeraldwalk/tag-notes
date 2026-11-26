@@ -4,7 +4,6 @@ import CaptureBox from '../components/CaptureBox';
 import EmptyState from '../components/EmptyState';
 import ListSection from '../components/ListSection';
 import Message from '../components/Message';
-import NavBar from '../components/NavBar';
 import NavButton from '../components/NavButton';
 import Page from '../components/Page';
 import RawEntryCard from '../components/RawEntryCard';
@@ -105,14 +104,10 @@ function Inbox(props: InboxProps) {
 
   return (
     <Page
-      nav={
-        <Show
-          when={isNewView()}
-          fallback={<NavBar title="Filed" back={{ href: '/inbox', label: 'Inbox' }} />}
-        >
-          <NavBar title="Inbox" trailing={<NavButton href="/inbox/filed">Filed</NavButton>} />
-        </Show>
-      }
+      title={isNewView() ? 'Inbox' : 'Filed'}
+      large={isNewView()}
+      back={isNewView() ? undefined : { href: '/inbox', label: 'Inbox' }}
+      trailing={isNewView() ? <NavButton href="/inbox/filed">Filed</NavButton> : undefined}
     >
       <Show when={isNewView()}>
         <CaptureBox onSave={handleSave} />
@@ -129,7 +124,7 @@ function Inbox(props: InboxProps) {
             </EmptyState>
           }
         >
-          <ListSection title={isNewView() ? 'New' : 'Done and dismissed'}>
+          <ListSection>
             <For each={entries()}>
               {(entry) => (
                 <RawEntryCard

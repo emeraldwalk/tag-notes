@@ -8,7 +8,6 @@ import GlucoseSection from '../components/GlucoseSection';
 import ListSection from '../components/ListSection';
 import MedicinesSection from '../components/MedicinesSection';
 import Message from '../components/Message';
-import NavBar from '../components/NavBar';
 import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
 import { exportAll, importBundle } from '../lib/backup';
@@ -144,7 +143,7 @@ function Settings() {
   };
 
   return (
-    <Page nav={<NavBar title="Settings" />}>
+    <Page title="Settings" large>
       <form onSubmit={(event) => void handleSaveTargets(event)}>
         <ListSection title="Food targets" padded>
           <div class={styles.grid2}>

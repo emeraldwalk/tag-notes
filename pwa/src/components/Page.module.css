@@ -19,3 +19,11 @@
 .fill {
   gap: var(--space-m);
 }
+
+.largeTitle {
+  margin: calc(-1 * var(--space-s)) 0 calc(-1 * var(--space-m));
+  font-size: var(--font-large-title);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}

@@ -1,13 +1,13 @@
-import { A } from '@solidjs/router';
 import { createMemo, createSignal, For, onMount, Show } from 'solid-js';
 import EmptyState from '../components/EmptyState';
 import ListSection from '../components/ListSection';
 import Message from '../components/Message';
-import NavBar from '../components/NavBar';
+import ListRow from '../components/ListRow';
 import NavButton from '../components/NavButton';
 import Page from '../components/Page';
+import SearchField from '../components/SearchField';
 import { errorMessage } from '../lib/api';
-import { formatEntryTime } from '../lib/inbox/time';
+import { groupBySection, listDate } from '../lib/notes/sections';
 import { noteStore } from '../lib/notes/store-instance';
 import type { Note } from '../lib/notes/types';
 import styles from './NoteHistory.module.css';
@@ -58,33 +58,22 @@ function NoteHistory() {
         ? 'No notes without tags.'
         : filter()
           ? 'No notes with this tag.'
-          : 'No notes yet. Tap the pencil to write one.';
+          : 'No notes yet. Tap the compose button to write one.';
+
+  const sections = createMemo(() => groupBySection(visibleNotes(), (note) => note.updatedAt));
 
   return (
     <Page
-      nav={
-        <NavBar
-          title="Notes"
-          trailing={
-            <NavButton href="/notes/new" label="New note">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
-            </NavButton>
-          }
-        />
+      title="Notes"
+      large
+      trailing={
+        <NavButton href="/notes/new" label="New note">
+          <ComposeIcon />
+        </NavButton>
       }
     >
       <div class={styles.filters}>
-        <input
-          type="search"
-          class={styles.search}
-          placeholder="Search"
-          aria-label="Search notes"
-          value={searchQuery()}
-          onInput={(event) => setSearchQuery(event.currentTarget.value)}
-        />
+        <SearchField label="Search notes" value={searchQuery()} onInput={setSearchQuery} />
 
         <Show when={tags().length > 0 || hasUntagged()}>
           <div class={styles.chips} role="group" aria-label="Filter by tag">
@@ -97,7 +86,7 @@ function NoteHistory() {
                   aria-pressed={filter() === tag}
                   onClick={() => toggle(tag)}
                 >
-                  {tag}
+                  #{tag}
                 </button>
               )}
             </For>
@@ -119,30 +108,43 @@ function NoteHistory() {
       <Message kind="error" text={error()} />
 
       <Show when={loaded()}>
-        <Show when={visibleNotes().length > 0} fallback={<EmptyState>{emptyText()}</EmptyState>}>
-          <ListSection>
-            <For each={visibleNotes()}>
-              {(note) => (
-                <A href={`/notes/${encodeURIComponent(note.id)}`} class={styles.row}>
-                  <span class={styles.main}>
-                    <span class={styles.title} classList={{ [styles.untitled]: note.title.trim() === '' }}>
-                      {note.title.trim() || 'Untitled'}
-                    </span>
-                    <span class={styles.meta}>
-                      <span>{formatEntryTime(note.updatedAt)}</span>
-                      <For each={note.tags}>{(tag) => <span class={styles.tag}>{tag}</span>}</For>
-                    </span>
-                  </span>
-                  <span class={styles.chevron} aria-hidden="true">
-                    ›
-                  </span>
-                </A>
-              )}
-            </For>
-          </ListSection>
+        <Show when={sections().length > 0} fallback={<EmptyState>{emptyText()}</EmptyState>}>
+          <For each={sections()}>
+            {(group) => (
+              <ListSection title={group.section.label} prominent>
+                <For each={group.items}>
+                  {(note) => (
+                    <ListRow
+                      href={`/notes/${encodeURIComponent(note.id)}`}
+                      title={note.title.trim() || 'Untitled'}
+                      detail={listDate(note.updatedAt)}
+                      subtitle={preview(note)}
+                    />
+                  )}
+                </For>
+              </ListSection>
+            )}
+          </For>
         </Show>
       </Show>
     </Page>
+  );
+}
+
+/** The gray line under a note's title: its first line of text and its tags, like iOS Notes' preview. */
+function preview(note: Note): string {
+  const firstLine = note.body.split('\n').find((line) => line.trim() !== '')?.trim();
+  const tags = note.tags.map((tag) => `#${tag}`).join(' ');
+  return [firstLine, tags].filter(Boolean).join(' · ') || 'No additional text';
+}
+
+/** Square-and-pencil, the iOS compose glyph. */
+function ComposeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" />
+      <path d="M17.5 2.5a2.12 2.12 0 0 1 3 3L12 14l-4 1 1-4Z" />
+    </svg>
   );
 }
 

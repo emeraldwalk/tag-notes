@@ -6,7 +6,8 @@ import EmptyState from '../components/EmptyState';
 import ListSection from '../components/ListSection';
 import MedicineButton from '../components/MedicineButton';
 import Message from '../components/Message';
-import NavBar from '../components/NavBar';
+import ListRow from '../components/ListRow';
+import NavButton from '../components/NavButton';
 import Page from '../components/Page';
 import { errorMessage } from '../lib/api';
 import { medsStore } from '../lib/meds/store-instance';
@@ -168,7 +169,17 @@ function Meds() {
   };
 
   return (
-    <Page nav={<NavBar title="Meds" />}>
+    <Page
+      title="Meds"
+      large
+      trailing={
+        <NavButton label="Log something else" onClick={() => setSheet({ kind: 'other' })}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </NavButton>
+      }
+    >
       <Message kind="error" text={error()} />
 
       <section class={styles.buttons} aria-label="Log a medicine">
@@ -182,15 +193,12 @@ function Meds() {
             />
           )}
         </For>
-        <button type="button" class={styles.otherButton} onClick={() => setSheet({ kind: 'other' })}>
-          Something else
-        </button>
       </section>
 
       <Show when={loaded() && active().length === 0}>
         <p class={styles.hint}>
           Add your medicines in <A href="/settings">Settings</A> to log them with one tap. Tap a medicine to log it now;
-          press and hold (or tap ···) to pick the time or dose.
+          press and hold (or tap ···) to pick the time or dose. + logs anything else.
         </p>
       </Show>
 
@@ -200,19 +208,15 @@ function Meds() {
 
       <For each={days()}>
         {(group) => (
-          <ListSection title={dayLabel(group.day)}>
+          <ListSection title={dayLabel(group.day)} prominent>
             <For each={group.doses}>
               {(dose) => (
-                <button type="button" class={styles.doseRow} onClick={() => setSheet({ kind: 'edit', dose })}>
-                  <span class={styles.doseTime}>{formatTime(dose.takenAt)}</span>
-                  <span class={styles.doseMain}>
-                    <span class={styles.doseName}>{dose.medicineName}</span>
-                    <Show when={dose.note}>
-                      <span class={styles.doseNote}>{dose.note}</span>
-                    </Show>
-                  </span>
-                  <span class={styles.doseAmount}>{dose.dose ?? ''}</span>
-                </button>
+                <ListRow
+                  title={dose.medicineName}
+                  detail={formatTime(dose.takenAt)}
+                  subtitle={[dose.dose, dose.note].filter(Boolean).join(' · ') || undefined}
+                  onClick={() => setSheet({ kind: 'edit', dose })}
+                />
               )}
             </For>
           </ListSection>
